@@ -17,7 +17,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **DET-06**: User can detect and replace Swedish org-nummer (with checksum validation)
 - [ ] **DET-07**: User can detect and replace company/legal entity names (AB, Ltd, GmbH, Inc, LLC suffixes boost detection)
 - [ ] **DET-08**: Detection confidence is boosted by column header context (e.g., "Customer" column boosts NER)
-- [ ] **DET-09**: Unsupported surfaces (formulas, comments, charts, VBA, etc.) are logged as warnings in the manifest
+- [x] **DET-09**: Unsupported surfaces (formulas, comments, charts, VBA, etc.) are logged as warnings in the manifest
 
 ### Tokenization
 
@@ -106,7 +106,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DET-06 | Phase 4 | Pending |
 | DET-07 | Phase 4 | Pending |
 | DET-08 | Phase 4 | Pending |
-| DET-09 | Phase 1 | Pending |
+| DET-09 | Phase 1 | Complete |
 | TOK-01 | Phase 1 | Complete |
 | TOK-02 | Phase 1 | Complete |
 | TOK-03 | Phase 1 | Complete |
