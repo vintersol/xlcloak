@@ -35,6 +35,13 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **BUN-05**: Reconciliation report included in restore output showing what was restored, skipped, and conflicted
 - [ ] **BUN-06**: Diff command compares a sanitized file against its bundle to show what changed
 
+### Test Fixtures
+
+- [ ] **TEST-01**: Three example `.xlsx` files (simple/medium/hard) serve as test and validation data
+- [ ] **TEST-02**: Simple fixture: single sheet, basic PII (names, emails, phones)
+- [ ] **TEST-03**: Medium fixture: multiple sheets, cross-sheet references, Swedish PII, company names, mixed content
+- [ ] **TEST-04**: Hard fixture: formulas, comments, merged cells, charts, unsupported surfaces, multi-entity cells, edge cases
+
 ### CLI & Distribution
 
 - [ ] **CLI-01**: User can run `xlcloak sanitize <file.xlsx>` to produce sanitized file + bundle + manifest
@@ -91,40 +98,44 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DET-01 | — | Pending |
-| DET-02 | — | Pending |
-| DET-03 | — | Pending |
-| DET-04 | — | Pending |
-| DET-05 | — | Pending |
-| DET-06 | — | Pending |
-| DET-07 | — | Pending |
-| DET-08 | — | Pending |
-| DET-09 | — | Pending |
-| TOK-01 | — | Pending |
-| TOK-02 | — | Pending |
-| TOK-03 | — | Pending |
-| TOK-04 | — | Pending |
-| BUN-01 | — | Pending |
-| BUN-02 | — | Pending |
-| BUN-03 | — | Pending |
-| BUN-04 | — | Pending |
-| BUN-05 | — | Pending |
-| BUN-06 | — | Pending |
-| CLI-01 | — | Pending |
-| CLI-02 | — | Pending |
-| CLI-03 | — | Pending |
-| CLI-04 | — | Pending |
-| CLI-05 | — | Pending |
-| CLI-06 | — | Pending |
-| CLI-07 | — | Pending |
-| CLI-08 | — | Pending |
-| CLI-09 | — | Pending |
+| DET-01 | Phase 2 | Pending |
+| DET-02 | Phase 2 | Pending |
+| DET-03 | Phase 2 | Pending |
+| DET-04 | Phase 2 | Pending |
+| DET-05 | Phase 4 | Pending |
+| DET-06 | Phase 4 | Pending |
+| DET-07 | Phase 4 | Pending |
+| DET-08 | Phase 4 | Pending |
+| DET-09 | Phase 1 | Pending |
+| TOK-01 | Phase 1 | Pending |
+| TOK-02 | Phase 1 | Pending |
+| TOK-03 | Phase 1 | Pending |
+| TOK-04 | Phase 4 | Pending |
+| TEST-01 | Phase 1 | Pending |
+| TEST-02 | Phase 1 | Pending |
+| TEST-03 | Phase 1 | Pending |
+| TEST-04 | Phase 1 | Pending |
+| BUN-01 | Phase 2 | Pending |
+| BUN-02 | Phase 2 | Pending |
+| BUN-03 | Phase 3 | Pending |
+| BUN-04 | Phase 3 | Pending |
+| BUN-05 | Phase 3 | Pending |
+| BUN-06 | Phase 3 | Pending |
+| CLI-01 | Phase 2 | Pending |
+| CLI-02 | Phase 3 | Pending |
+| CLI-03 | Phase 2 | Pending |
+| CLI-04 | Phase 3 | Pending |
+| CLI-05 | Phase 3 | Pending |
+| CLI-06 | Phase 2 | Pending |
+| CLI-07 | Phase 3 | Pending |
+| CLI-08 | Phase 2 | Pending |
+| CLI-09 | Phase 2 | Pending |
 
 **Coverage:**
-- v1 requirements: 28 total
-- Mapped to phases: 0
-- Unmapped: 28
+- v1 requirements: 32 total
+- Mapped to phases: 32
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-03*
-*Last updated: 2026-04-03 after initial definition*
+*Last updated: 2026-04-03 after roadmap creation*
