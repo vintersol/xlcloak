@@ -21,9 +21,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Tokenization
 
-- [ ] **TOK-01**: Same source value always maps to the same token across the entire workbook
-- [ ] **TOK-02**: Tokens are human-readable and type-prefixed (e.g., PERSON_001, ORG_001, SSN_SE_001)
-- [ ] **TOK-03**: Tokens preserve the shape of the original value where possible (email stays email-shaped, phone stays phone-shaped)
+- [x] **TOK-01**: Same source value always maps to the same token across the entire workbook
+- [x] **TOK-02**: Tokens are human-readable and type-prefixed (e.g., PERSON_001, ORG_001, SSN_SE_001)
+- [x] **TOK-03**: Tokens preserve the shape of the original value where possible (email stays email-shaped, phone stays phone-shaped)
 - [ ] **TOK-04**: Hide-all mode replaces every text cell with a stable token regardless of content
 
 ### Bundle & Restore
@@ -107,9 +107,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DET-07 | Phase 4 | Pending |
 | DET-08 | Phase 4 | Pending |
 | DET-09 | Phase 1 | Pending |
-| TOK-01 | Phase 1 | Pending |
-| TOK-02 | Phase 1 | Pending |
-| TOK-03 | Phase 1 | Pending |
+| TOK-01 | Phase 1 | Complete |
+| TOK-02 | Phase 1 | Complete |
+| TOK-03 | Phase 1 | Complete |
 | TOK-04 | Phase 4 | Pending |
 | TEST-01 | Phase 1 | Pending |
 | TEST-02 | Phase 1 | Pending |

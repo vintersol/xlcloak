@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Project scaffolding and token engine (TokenRegistry, TokenFormatter, EntityType)
+- [x] 01-01-PLAN.md — Project scaffolding and token engine (TokenRegistry, TokenFormatter, EntityType)
 - [ ] 01-02-PLAN.md — Excel I/O pipeline (WorkbookReader, WorkbookWriter, surface scanner, manifest)
 - [ ] 01-03-PLAN.md — Test fixtures (simple/medium/hard .xlsx generation and validation)
 
