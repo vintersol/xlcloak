@@ -12,7 +12,7 @@ xlcloak is built bottom-up, starting from the components where correctness is ir
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Token engine correctness and validated Excel I/O pipeline
+- [x] **Phase 1: Foundation** - Token engine correctness and validated Excel I/O pipeline (completed 2026-04-03)
 - [ ] **Phase 2: Core Sanitize** - Working sanitize command with detection, encrypted bundle, and manifest
 - [ ] **Phase 3: Restore & Diff** - Complete round-trip with conflict-aware reconciliation and diff
 - [ ] **Phase 4: Power Features** - Swedish PII, context-aware detection, hide-all mode, entity detection
@@ -29,12 +29,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Tokens preserve the shape of the original where possible (an email-shaped input produces an email-shaped token)
   4. A workbook with formulas, comments, charts, and merged cells can be read and written back with no data loss in text cells, and unsupported surfaces (formulas, comments, charts, VBA) appear as warnings in the manifest
   5. Three example .xlsx fixtures (simple/medium/hard) exist with graduated PII complexity and are used to validate all phases
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 01-01-PLAN.md — Project scaffolding and token engine (TokenRegistry, TokenFormatter, EntityType)
 - [x] 01-02-PLAN.md — Excel I/O pipeline (WorkbookReader, WorkbookWriter, surface scanner, manifest)
-- [ ] 01-03-PLAN.md — Test fixtures (simple/medium/hard .xlsx generation and validation)
+- [x] 01-03-PLAN.md — Test fixtures (simple/medium/hard .xlsx generation and validation)
 
 ### Phase 2: Core Sanitize
 **Goal**: Users can sanitize an xlsx file and receive a sanitized copy, encrypted restore bundle, and manifest — and inspect what would be sanitized without writing files
@@ -78,7 +78,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 2/3 | In Progress|  |
+| 1. Foundation | 3/3 | Complete   | 2026-04-03 |
 | 2. Core Sanitize | 0/? | Not started | - |
 | 3. Restore & Diff | 0/? | Not started | - |
 | 4. Power Features | 0/? | Not started | - |

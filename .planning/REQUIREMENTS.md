@@ -37,10 +37,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Test Fixtures
 
-- [ ] **TEST-01**: Three example `.xlsx` files (simple/medium/hard) serve as test and validation data
-- [ ] **TEST-02**: Simple fixture: single sheet, basic PII (names, emails, phones)
-- [ ] **TEST-03**: Medium fixture: multiple sheets, cross-sheet references, Swedish PII, company names, mixed content
-- [ ] **TEST-04**: Hard fixture: formulas, comments, merged cells, charts, unsupported surfaces, multi-entity cells, edge cases
+- [x] **TEST-01**: Three example `.xlsx` files (simple/medium/hard) serve as test and validation data
+- [x] **TEST-02**: Simple fixture: single sheet, basic PII (names, emails, phones)
+- [x] **TEST-03**: Medium fixture: multiple sheets, cross-sheet references, Swedish PII, company names, mixed content
+- [x] **TEST-04**: Hard fixture: formulas, comments, merged cells, charts, unsupported surfaces, multi-entity cells, edge cases
 
 ### CLI & Distribution
 
@@ -111,10 +111,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOK-02 | Phase 1 | Complete |
 | TOK-03 | Phase 1 | Complete |
 | TOK-04 | Phase 4 | Pending |
-| TEST-01 | Phase 1 | Pending |
-| TEST-02 | Phase 1 | Pending |
-| TEST-03 | Phase 1 | Pending |
-| TEST-04 | Phase 1 | Pending |
+| TEST-01 | Phase 1 | Complete |
+| TEST-02 | Phase 1 | Complete |
+| TEST-03 | Phase 1 | Complete |
+| TEST-04 | Phase 1 | Complete |
 | BUN-01 | Phase 2 | Pending |
 | BUN-02 | Phase 2 | Pending |
 | BUN-03 | Phase 3 | Pending |
