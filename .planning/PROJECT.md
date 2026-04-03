@@ -12,7 +12,10 @@ Sensitive text in Excel files never reaches AI tools, and the round-trip back to
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Same source value always maps to the same token across the entire workbook — *Validated in Phase 1: Foundation*
+- [x] Token mode: sensitive text replaced with stable, shape-preserving tokens (names, orgs, emails, phones, SSNs) — *Validated in Phase 1: Foundation (token engine + formatters)*
+- [x] Unsupported surfaces (formulas, comments, charts, etc.) logged as warnings in manifest — *Validated in Phase 1: Foundation*
+- [x] Three example .xlsx fixtures (simple/medium/hard) serve as test and validation data — *Validated in Phase 1: Foundation*
 
 ### Active
 
@@ -90,4 +93,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-03 after initialization*
+*Last updated: 2026-04-03 after Phase 1 completion*
