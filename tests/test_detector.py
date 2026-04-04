@@ -259,3 +259,22 @@ def test_personnummer_detect_cell_no_keyerror(tmp_path):
     # on NLP context, but no exception means the dict wiring is correct
     assert isinstance(results, list)
     assert isinstance(replaced, str)
+
+
+# ── CompanySuffixRecognizer tests (no spaCy required) ─────────────────────
+
+
+def test_company_suffix_detected():
+    from xlcloak.recognizers import CompanySuffixRecognizer
+    r = CompanySuffixRecognizer()
+    assert _recognize(r, "Volvo AB"), "Volvo AB not detected"
+    assert _recognize(r, "Acme Corporation"), "Acme Corporation not detected"
+    assert _recognize(r, "Test LLC"), "Test LLC not detected"
+    assert _recognize(r, "Smith Jones Ltd"), "Smith Jones Ltd not detected"
+
+
+def test_company_suffix_no_false_positive():
+    from xlcloak.recognizers import CompanySuffixRecognizer
+    r = CompanySuffixRecognizer()
+    assert not _recognize(r, "AB"), "Bare 'AB' should not be detected"
+    assert not _recognize(r, "the ltd"), "Lowercase prefix should not be detected"

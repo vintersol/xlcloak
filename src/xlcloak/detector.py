@@ -7,7 +7,11 @@ from presidio_analyzer import AnalyzerEngine
 from presidio_analyzer.nlp_engine import NlpEngineProvider
 
 from xlcloak.models import CellRef, EntityType, ScanResult
-from xlcloak.recognizers import SweOrgNummerRecognizer, SwePersonnummerRecognizer
+from xlcloak.recognizers import (
+    CompanySuffixRecognizer,
+    SweOrgNummerRecognizer,
+    SwePersonnummerRecognizer,
+)
 from xlcloak.token_engine import TokenRegistry
 
 # Mapping from Presidio entity names to xlcloak EntityType values
@@ -19,6 +23,7 @@ PRESIDIO_TO_ENTITY_TYPE: dict[str, EntityType] = {
     "ORGANIZATION": EntityType.ORG,
     "PERSONNUMMER_SE": EntityType.SSN_SE,    # SwePersonnummerRecognizer
     "ORGNUM_SE": EntityType.ORGNUM_SE,       # SweOrgNummerRecognizer
+    "COMPANY_SUFFIX": EntityType.ORG,        # CompanySuffixRecognizer
 }
 
 # Entity names to pass to AnalyzerEngine.analyze() — avoids unwanted types
@@ -71,6 +76,7 @@ class PiiDetector:
         )
         self._analyzer.registry.add_recognizer(SwePersonnummerRecognizer())
         self._analyzer.registry.add_recognizer(SweOrgNummerRecognizer())
+        self._analyzer.registry.add_recognizer(CompanySuffixRecognizer())
         return self._analyzer
 
     def detect_cell(
@@ -107,8 +113,16 @@ class PiiDetector:
             score_threshold=self._threshold,
         )
 
+        # Deduplicate by span — keep highest-score result when two recognizers fire on same span
+        seen_spans: dict[tuple[int, int], object] = {}
+        for r in raw_results:
+            key = (r.start, r.end)
+            if key not in seen_spans or r.score > seen_spans[key].score:  # type: ignore[union-attr]
+                seen_spans[key] = r
+        deduped_results = list(seen_spans.values())
+
         # Sort descending by start offset for safe right-to-left replacement
-        sorted_results = sorted(raw_results, key=lambda r: r.start, reverse=True)
+        sorted_results = sorted(deduped_results, key=lambda r: r.start, reverse=True)
 
         scan_results: list[ScanResult] = []
         replaced_text = cell.value

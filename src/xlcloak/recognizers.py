@@ -8,6 +8,53 @@ from presidio_analyzer import PatternRecognizer
 from presidio_analyzer.pattern import Pattern
 
 
+class CompanySuffixRecognizer(PatternRecognizer):
+    """Detect company/legal entity names via capitalized-word + suffix pattern.
+
+    Matches one to five capitalized words followed by a recognized legal suffix
+    at a word boundary. Case-insensitive suffix match. Score 0.65 (between NER
+    ORGANIZATION at 0.85+ and random pattern match at 0.5).
+
+    Maps to EntityType.ORG (via PRESIDIO_TO_ENTITY_TYPE["COMPANY_SUFFIX"]).
+    Coexists with Presidio's NER-based ORGANIZATION recognizer — TokenRegistry
+    deduplicates by original string, so no token duplication occurs.
+    """
+
+    _SUFFIXES = (
+        "Aktiebolag|AB|HB|KB|Ltd|Limited|Inc|Corp|Corporation|GmbH|LLC|LLP|SA|NV|BV"
+    )
+    # One or more capitalized words (Xxxx) followed by a suffix at word boundary.
+    # The suffix alternation is case-insensitive via re.IGNORECASE in Pattern.
+    _PATTERN = (
+        r"(?:[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,4}\s+)"
+        r"(?:" + _SUFFIXES + r")\b"
+    )
+
+    PATTERNS = [
+        Pattern("company_suffix", _PATTERN, 0.65),
+    ]
+
+    def __init__(self) -> None:
+        super().__init__(
+            supported_entity="COMPANY_SUFFIX",
+            patterns=self.PATTERNS,
+            supported_language="en",
+        )
+
+    def validate_result(self, pattern_text: str) -> bool | None:  # type: ignore[override]
+        """Reject matches where the first word is not capitalized (case-sensitive check).
+
+        Presidio compiles patterns with re.IGNORECASE, so '[A-Z][a-z]+' would
+        match 'the'. This validator ensures the first character is actually
+        an uppercase letter.
+        """
+        # Strip leading/trailing whitespace and check first character
+        stripped = pattern_text.lstrip()
+        if not stripped or not stripped[0].isupper():
+            return False
+        return True
+
+
 def _luhn_personnummer(digits_10: str) -> bool:
     """Validate a 10-digit personnummer string using the Luhn variant.
 
