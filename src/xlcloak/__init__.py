@@ -4,6 +4,7 @@ from __future__ import annotations
 
 __version__ = "0.1.0"
 
+from xlcloak.detector import PiiDetector
 from xlcloak.excel_io import WorkbookReader, WorkbookWriter
 from xlcloak.manifest import Manifest
 from xlcloak.models import EntityType
@@ -13,6 +14,7 @@ __all__ = [
     "__version__",
     "EntityType",
     "Manifest",
+    "PiiDetector",
     "TokenFormatter",
     "TokenRegistry",
     "WorkbookReader",
