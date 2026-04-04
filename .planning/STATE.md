@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: milestone
-status: verifying
-stopped_at: Completed 04-power-features-04-03-PLAN.md
-last_updated: "2026-04-04T16:13:26.597Z"
+milestone_name: MVP
+status: complete
+stopped_at: v1.0 milestone archived
+last_updated: "2026-04-04T00:00:00.000Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 4
@@ -18,10 +18,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-03)
+See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Sensitive text in Excel files never reaches AI tools, and the round-trip back to originals is reliable and conflict-aware.
-**Current focus:** Phase 04 — power-features
+**Current focus:** v1.0 shipped — planning next milestone
 
 ## Current Position
 
