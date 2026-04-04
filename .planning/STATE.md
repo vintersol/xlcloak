@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-core-sanitize-03-PLAN.md
-last_updated: "2026-04-04T04:49:05.525Z"
+stopped_at: Completed 02-core-sanitize-04-PLAN.md
+last_updated: "2026-04-04T04:55:04.879Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 ## Current Position
 
 Phase: 02 (core-sanitize) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-04-04
 
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-foundation P03 | 2 | 2 tasks | 5 files |
 | Phase 02-core-sanitize P02 | 2 | 2 tasks | 3 files |
 | Phase 02-core-sanitize P03 | 20 | 2 tasks | 5 files |
+| Phase 02-core-sanitize P04 | 4 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,8 @@ Recent decisions affecting current work:
 - [Phase 02-core-sanitize]: Password mode flag ('default'/'custom') stored in bundle payload for Phase 3 CLI restore UX
 - [Phase 02-core-sanitize]: Lazy import of PiiDetector inside sanitize CLI command body to avoid loading spaCy model on xlcloak --help
 - [Phase 02-core-sanitize]: cells_sanitized counts distinct cells with PII (not total detections) - consistent with Manifest semantics
+- [Phase 02-core-sanitize]: Option A for verbose scores: extend ScanResult with score/detection_method instead of separate display path — keeps data flow clean
+- [Phase 02-core-sanitize]: inspect command filters warnings to formula/chart/comment only — merged cells and images are info-level, not actionable unsupported surfaces
 
 ### Pending Todos
 
@@ -96,6 +99,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T04:49:05.522Z
-Stopped at: Completed 02-core-sanitize-03-PLAN.md
+Last session: 2026-04-04T04:55:04.877Z
+Stopped at: Completed 02-core-sanitize-04-PLAN.md
 Resume file: None

@@ -13,7 +13,7 @@ xlcloak is built bottom-up, starting from the components where correctness is ir
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Token engine correctness and validated Excel I/O pipeline (completed 2026-04-03)
-- [ ] **Phase 2: Core Sanitize** - Working sanitize command with detection, encrypted bundle, and manifest
+- [x] **Phase 2: Core Sanitize** - Working sanitize command with detection, encrypted bundle, and manifest (completed 2026-04-04)
 - [ ] **Phase 3: Restore & Diff** - Complete round-trip with conflict-aware reconciliation and diff
 - [ ] **Phase 4: Power Features** - Swedish PII, context-aware detection, hide-all mode, entity detection
 
@@ -46,13 +46,13 @@ Plans:
   3. Email addresses, phone numbers, person names (via NER), and URLs in cell text are detected and replaced with stable tokens
   4. The `.xlcloak` bundle is encrypted with a password-derived Fernet key; the manifest documents coverage, transformations, and risk notes
   5. The package is installable via `pip install xlcloak` and works on Python 3.10+ on Windows, macOS, and Linux
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 02-01-PLAN.md — PII detection pipeline (PiiDetector wrapping Presidio, entity mapping, multi-entity replacement)
 - [x] 02-02-PLAN.md — Encrypted bundle writer/reader (Fernet + PBKDF2HMAC, JSON payload, salt handling)
 - [x] 02-03-PLAN.md — Sanitizer orchestrator + sanitize CLI command (read -> detect -> tokenize -> write -> bundle -> manifest)
-- [ ] 02-04-PLAN.md — Inspect CLI command + packaging finalization (dry-run preview, rich table, PyPI metadata)
+- [x] 02-04-PLAN.md — Inspect CLI command + packaging finalization (dry-run preview, rich table, PyPI metadata)
 
 ### Phase 3: Restore & Diff
 **Goal**: Users can complete the full round-trip — restoring originals from a bundle with conflict-aware reconciliation, and diffing a sanitized file against its bundle
@@ -84,6 +84,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete   | 2026-04-03 |
-| 2. Core Sanitize | 3/4 | In Progress|  |
+| 2. Core Sanitize | 4/4 | Complete   | 2026-04-04 |
 | 3. Restore & Diff | 0/? | Not started | - |
 | 4. Power Features | 0/? | Not started | - |
