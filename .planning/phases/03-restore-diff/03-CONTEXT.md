@@ -26,7 +26,7 @@ Complete the full sanitize → AI → restore round-trip. The `restore` command 
 - **D-04:** Conflict resolution strategy: skip-conflicts (safe default). No overwrite-all or interactive mode in Phase 3.
 
 ### diff output
-- **D-05:** `diff` shows changed cells only in a Rich table: Sheet | Cell | Was (token) | Now. Summary header: "N cells changed by AI." Footer: "No files written."
+- **D-05:** `diff` shows changed cells only in a Rich table: Token | Original Value. Summary header: "N tokens replaced by AI." Footer: "No files written." (V1 limitation: Sheet/Cell/Now columns require per-cell position tracking not present in the Phase 2 bundle format — deferred to V2.)
 - **D-06:** `diff` with `--verbose` additionally shows unchanged token cells and new cells (cells present in sanitized file but absent from bundle). Default (no flag) shows changed only.
 - **D-07:** `diff` is read-only — no output files written, ever.
 
