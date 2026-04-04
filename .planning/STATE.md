@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 4 context gathered (discuss mode)
-last_updated: "2026-04-04T14:50:51.235Z"
+status: executing
+stopped_at: Completed 04-power-features-04-01-PLAN.md
+last_updated: "2026-04-04T15:42:16.014Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 12
+  completed_plans: 10
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-03)
 
 **Core value:** Sensitive text in Excel files never reaches AI tools, and the round-trip back to originals is reliable and conflict-aware.
-**Current focus:** Phase 03 — restore-diff
+**Current focus:** Phase 04 — power-features
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 04 (power-features) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-04-04
 
 Progress: [░░░░░░░░░░] 0%
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-core-sanitize P04 | 4 | 2 tasks | 6 files |
 | Phase 03-restore-diff P01 | 4 | 2 tasks | 5 files |
 | Phase 03-restore-diff P02 | 4 | 2 tasks | 2 files |
+| Phase 04-power-features P01 | 736 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,9 @@ Recent decisions affecting current work:
 - [Phase 03-restore-diff]: render_report() is a standalone function not a method on Restorer, keeping RestoreResult a pure dataclass
 - [Phase 03-restore-diff]: diff uses missing-token detection (same as restorer): tokens in reverse_map absent from file = AI-modified
 - [Phase 03-restore-diff]: CLI aliases registered via main.add_command(fn, name='alias') at bottom of cli.py — no wrapper functions
+- [Phase 04-power-features]: validate_result() returns True/False never mutates self.score — class-level attribute would corrupt subsequent recognitions
+- [Phase 04-power-features]: Recognizers registered via self._analyzer.registry.add_recognizer() not AnalyzerEngine.add_recognizer() (API differs from plan example in installed Presidio version)
+- [Phase 04-power-features]: SweOrgNummerRecognizer requires hyphen (NNNNNN-NNNN) while SwePersonnummerRecognizer accepts 10-digit with or without separator
 
 ### Pending Todos
 
@@ -111,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T14:50:51.233Z
-Stopped at: Phase 4 context gathered (discuss mode)
-Resume file: .planning/phases/04-power-features/04-CONTEXT.md
+Last session: 2026-04-04T15:42:16.010Z
+Stopped at: Completed 04-power-features-04-01-PLAN.md
+Resume file: None
