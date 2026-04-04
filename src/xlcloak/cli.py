@@ -432,3 +432,9 @@ def diff(file: Path, bundle_path: Path, password: str, verbose: bool) -> None:
 
     click.echo("")
     click.echo("No files written.")
+
+
+# Aliases (per Phase 3 decisions D-01, D-02)
+main.add_command(restore, name="reconcile")    # reconcile -> restore (D-01, CLI-05)
+main.add_command(sanitize, name="deidentify")  # deidentify -> sanitize (D-02, CLI-07)
+main.add_command(restore, name="identify")     # identify -> restore (D-02, CLI-07)
