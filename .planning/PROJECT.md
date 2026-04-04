@@ -19,15 +19,19 @@ Sensitive text in Excel files never reaches AI tools, and the round-trip back to
 
 ### Active
 
-- [ ] User can sanitize an `.xlsx` file via CLI, producing a sanitized copy, encrypted restore bundle, and manifest
+- [x] User can sanitize an `.xlsx` file via CLI, producing a sanitized copy, encrypted restore bundle, and manifest — *Validated in Phase 2: Core Sanitize*
+- [x] User can inspect a file (dry-run preview) without writing any output — *Validated in Phase 2: Core Sanitize*
+- [x] Detection via pattern recognizers (email, phone, URLs) — *Validated in Phase 2: Core Sanitize (114 tests pass)*
+- [x] Detection via NER recognizers (person names) — *Validated in Phase 2: Core Sanitize (spaCy en_core_web_lg)*
+- [x] Encrypted `.xlcloak` restore bundle (Fernet, password-derived key, PBKDF2HMAC-SHA256 at 600k iterations) — *Validated in Phase 2: Core Sanitize*
+- [x] Manifest file documenting coverage, transformations, and risk notes — *Validated in Phase 2: Core Sanitize*
 - [ ] User can restore a sanitized `.xlsx` from its bundle, with conflict-aware reconciliation
-- [ ] User can inspect a file (dry-run preview) without writing any output
 - [ ] User can diff a sanitized file against its bundle to see what changed
 - [ ] User can reconcile a modified sanitized file against its bundle
 - [ ] Token mode: sensitive text replaced with stable, shape-preserving tokens (names, orgs, emails, phones, SSNs)
 - [ ] Hide-all mode: every text cell replaced with a stable token
 - [ ] Same source value always maps to the same token across the entire workbook
-- [ ] Detection via pattern recognizers (email, phone, Swedish personnummer, org-nummer, URLs)
+- [ ] Detection via pattern recognizers (Swedish personnummer, org-nummer)
 - [ ] Detection via NER recognizers (person, organization, location)
 - [ ] Detection boosted by workbook context (column headers, sheet structure)
 - [ ] User-supplied domain configuration (dictionaries, per-column overrides, deny/allow lists)
@@ -93,4 +97,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-03 after Phase 1 completion*
+*Last updated: 2026-04-04 after Phase 2 completion*
