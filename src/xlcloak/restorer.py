@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -141,16 +142,30 @@ class Restorer:
         found_tokens: set[str] = set()
         cells_walked = 0
 
+        # Build a compiled regex from all token keys, sorted longest-first to
+        # avoid prefix collisions (e.g. PERSON_0019 before PERSON_001).
+        if reverse_map:
+            sorted_keys = sorted(reverse_map.keys(), key=len, reverse=True)
+            token_pattern: re.Pattern[str] | None = re.compile(
+                "|".join(re.escape(k) for k in sorted_keys)
+            )
+        else:
+            token_pattern = None
+
         for cell in reader.iter_text_cells(wb):
             cells_walked += 1
-            if cell.value in reverse_map:
-                patches.append((
-                    cell.sheet_name,
-                    cell.row,
-                    cell.col,
-                    reverse_map[cell.value],
-                ))
-                found_tokens.add(cell.value)
+            if token_pattern is None:
+                continue
+            cell_found: set[str] = set()
+
+            def _replace(m: re.Match, _found: set[str] = cell_found) -> str:
+                _found.add(m.group(0))
+                return reverse_map[m.group(0)]
+
+            new_value = token_pattern.sub(_replace, cell.value)
+            if cell_found:
+                patches.append((cell.sheet_name, cell.row, cell.col, new_value))
+                found_tokens.update(cell_found)
 
         # Compute counts
         restored_count = len(patches)
