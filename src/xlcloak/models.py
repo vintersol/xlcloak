@@ -16,6 +16,7 @@ class EntityType(enum.Enum):
     URL = "URL"
     SSN_SE = "SSN_SE"
     ORGNUM_SE = "ORGNUM_SE"
+    GENERIC = "GENERIC"
 
 
 @dataclass

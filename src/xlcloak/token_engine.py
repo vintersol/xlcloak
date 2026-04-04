@@ -44,6 +44,8 @@ class TokenFormatter:
                 return f"1000000-{counter:04d}"
             case EntityType.ORGNUM_SE:
                 return f"000000-{counter:04d}"
+            case EntityType.GENERIC:
+                return f"CELL_{counter:04d}"
 
 
 class TokenRegistry:

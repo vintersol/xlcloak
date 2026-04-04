@@ -14,14 +14,22 @@ def test_entity_type_importable() -> None:
 def test_entity_type_has_seven_members() -> None:
     from xlcloak.models import EntityType
 
-    assert len(EntityType) == 7
+    assert len(EntityType) == 8
 
 
 def test_entity_type_member_names() -> None:
     from xlcloak.models import EntityType
 
     names = {m.name for m in EntityType}
-    assert names == {"PERSON", "ORG", "EMAIL", "PHONE", "URL", "SSN_SE", "ORGNUM_SE"}
+    assert names == {"PERSON", "ORG", "EMAIL", "PHONE", "URL", "SSN_SE", "ORGNUM_SE", "GENERIC"}
+
+
+def test_entity_type_values() -> None:
+    from xlcloak.models import EntityType
+
+    assert {e.value for e in EntityType} == {
+        "PERSON", "ORG", "EMAIL", "PHONE", "URL", "SSN_SE", "ORGNUM_SE", "GENERIC"
+    }
 
 
 def test_entity_type_values_match_names() -> None:

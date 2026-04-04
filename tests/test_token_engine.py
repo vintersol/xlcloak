@@ -300,3 +300,12 @@ def test_formatter_overflow_raises() -> None:
     fmt = TokenFormatter()
     with pytest.raises(ValueError):
         fmt.format(EntityType.PERSON, 1000)
+
+
+def test_generic_token_format() -> None:
+    from xlcloak.token_engine import TokenFormatter
+
+    formatter = TokenFormatter()
+    assert formatter.format(EntityType.GENERIC, 1) == "CELL_0001"
+    assert formatter.format(EntityType.GENERIC, 42) == "CELL_0042"
+    assert formatter.format(EntityType.GENERIC, 999) == "CELL_0999"
