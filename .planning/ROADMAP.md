@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Token engine correctness and validated Excel I/O pipeline (completed 2026-04-03)
 - [x] **Phase 2: Core Sanitize** - Working sanitize command with detection, encrypted bundle, and manifest (completed 2026-04-04)
-- [ ] **Phase 3: Restore & Diff** - Complete round-trip with conflict-aware reconciliation and diff
+- [x] **Phase 3: Restore & Diff** - Complete round-trip with conflict-aware reconciliation and diff (completed 2026-04-04)
 - [ ] **Phase 4: Power Features** - Swedish PII, context-aware detection, hide-all mode, entity detection
 
 ## Phase Details
@@ -63,11 +63,11 @@ Plans:
   2. Restore output includes a reconciliation report showing exactly which cells were restored, skipped (conflict), and left untouched (new)
   3. User runs `xlcloak diff file.xlsx --bundle file.xlcloak` and sees a clear summary of what changed between the sanitized file and the bundle
   4. User can run `xlcloak reconcile` for explicit reconciliation, and compatibility aliases (`deidentify`, `identify`) route correctly to their commands
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 03-01-PLAN.md — Restorer module + restore CLI command (reconciliation engine, RestoreResult, manifest)
-- [ ] 03-02-PLAN.md — Diff command + CLI aliases (reconcile, deidentify, identify)
+- [x] 03-02-PLAN.md — Diff command + CLI aliases (reconcile, deidentify, identify)
 
 ### Phase 4: Power Features
 **Goal**: Users get differentiating detection capabilities — Swedish PII patterns, column-header context boosting, hide-all mode, and company/entity detection
@@ -81,7 +81,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Restorer module + restore CLI command (reconciliation engine, RestoreResult, manifest)
+- [x] 03-01-PLAN.md — Restorer module + restore CLI command (reconciliation engine, RestoreResult, manifest)
 - [ ] 03-02-PLAN.md — Diff command + CLI aliases (reconcile, deidentify, identify)
 
 ## Progress
@@ -93,5 +93,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete   | 2026-04-03 |
 | 2. Core Sanitize | 4/4 | Complete   | 2026-04-04 |
-| 3. Restore & Diff | 1/2 | In Progress|  |
+| 3. Restore & Diff | 2/2 | Complete   | 2026-04-04 |
 | 4. Power Features | 0/? | Not started | - |
