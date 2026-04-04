@@ -36,6 +36,8 @@ class ScanResult:
     entity_type: EntityType
     original: str
     token: str
+    score: float | None = None
+    detection_method: str | None = None
 
 
 @dataclass

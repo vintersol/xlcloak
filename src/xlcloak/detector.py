@@ -112,12 +112,19 @@ class PiiDetector:
             original = cell.value[result.start : result.end]
             entity_type = PRESIDIO_TO_ENTITY_TYPE[result.entity_type]
             token = registry.get_or_create(original, entity_type)
+            detection_method = (
+                "NER"
+                if result.entity_type in ("PERSON", "ORGANIZATION")
+                else "pattern"
+            )
             scan_results.append(
                 ScanResult(
                     cell=cell,
                     entity_type=entity_type,
                     original=original,
                     token=token,
+                    score=result.score,
+                    detection_method=detection_method,
                 )
             )
             # Apply replacement right-to-left in replaced_text
