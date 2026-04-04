@@ -5,10 +5,12 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+import openpyxl
 import pytest
 import spacy.util
 from click.testing import CliRunner
 
+from xlcloak.bundle import BundleWriter, DEFAULT_PASSWORD
 from xlcloak.cli import main
 from xlcloak.sanitizer import derive_output_paths
 
@@ -192,3 +194,99 @@ def test_package_version() -> None:
 
     assert result.exit_code == 0, f"Expected exit 0: {result.output}"
     assert "0.1.0" in result.output, f"Expected '0.1.0' in output: {result.output!r}"
+
+
+# ---------------------------------------------------------------------------
+# Restore command helpers
+# ---------------------------------------------------------------------------
+
+
+def _make_sanitized_xlsx_and_bundle(tmp_path: Path) -> tuple[Path, Path]:
+    """Create a minimal sanitized xlsx (with tokens) and matching bundle."""
+    # Build sanitized xlsx with tokens
+    sanitized = tmp_path / "data_sanitized.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.cell(row=1, column=1).value = "PERSON_001"
+    ws.cell(row=2, column=1).value = "EMAIL_002@example.com"
+    wb.save(str(sanitized))
+
+    # Write matching bundle
+    forward_map = {
+        "John Smith": "PERSON_001",
+        "john@example.com": "EMAIL_002@example.com",
+    }
+    reverse_map = {v: k for k, v in forward_map.items()}
+    bundle = tmp_path / "data.xlcloak"
+    BundleWriter(DEFAULT_PASSWORD).write(
+        bundle,
+        forward_map=forward_map,
+        reverse_map=reverse_map,
+        original_filename="data.xlsx",
+        sheets_processed=["Sheet1"],
+        token_count=len(forward_map),
+    )
+    return sanitized, bundle
+
+
+# ---------------------------------------------------------------------------
+# Restore command tests
+# ---------------------------------------------------------------------------
+
+
+def test_restore_help() -> None:
+    """xlcloak restore --help exits 0 and shows required options."""
+    runner = CliRunner()
+    result = runner.invoke(main, ["restore", "--help"])
+
+    assert result.exit_code == 0, f"Expected exit 0: {result.output}"
+    assert "--bundle" in result.output, f"Expected '--bundle' in output: {result.output!r}"
+    assert "--password" in result.output, f"Expected '--password' in output: {result.output!r}"
+    assert "--force" in result.output, f"Expected '--force' in output: {result.output!r}"
+    assert "--verbose" in result.output, f"Expected '--verbose' in output: {result.output!r}"
+    assert "--output" in result.output, f"Expected '--output' in output: {result.output!r}"
+
+
+def test_restore_produces_restored_file(tmp_path: Path) -> None:
+    """restore command exits 0 and produces _restored.xlsx file."""
+    sanitized, bundle = _make_sanitized_xlsx_and_bundle(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        ["restore", str(sanitized), "--bundle", str(bundle), "--force"],
+    )
+
+    assert result.exit_code == 0, f"Expected exit 0: {result.output}\n{result.exception}"
+    restored = tmp_path / "data_sanitized_restored.xlsx"
+    assert restored.exists(), f"Restored file not found: {restored}"
+    assert "Cells restored:" in result.output
+
+
+def test_restore_wrong_password_exits_error(tmp_path: Path) -> None:
+    """restore with wrong password exits non-zero and shows 'Invalid password' error."""
+    sanitized, bundle = _make_sanitized_xlsx_and_bundle(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        ["restore", str(sanitized), "--bundle", str(bundle), "--password", "wrong_pw"],
+    )
+
+    assert result.exit_code != 0, f"Expected non-zero exit, got {result.exit_code}"
+    assert "Invalid password" in result.output or "Invalid password" in (result.stderr or ""), (
+        f"Expected 'Invalid password' in output: {result.output!r}"
+    )
+
+
+def test_restore_overwrite_protection(tmp_path: Path) -> None:
+    """Second restore without --force exits non-zero with --force hint."""
+    sanitized, bundle = _make_sanitized_xlsx_and_bundle(tmp_path)
+
+    runner = CliRunner()
+    runner.invoke(main, ["restore", str(sanitized), "--bundle", str(bundle), "--force"])
+
+    result = runner.invoke(main, ["restore", str(sanitized), "--bundle", str(bundle)])
+    assert result.exit_code != 0, "Expected non-zero exit on overwrite without --force"
+    assert "--force" in result.output, f"Expected '--force' hint in output: {result.output!r}"

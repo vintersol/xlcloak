@@ -162,6 +162,76 @@ def sanitize(
 @main.command()
 @click.argument("file", type=click.Path(exists=True, path_type=Path))
 @click.option(
+    "--bundle",
+    "bundle_path",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to the .xlcloak restore bundle",
+)
+@click.option(
+    "--password",
+    default=DEFAULT_PASSWORD,
+    show_default=True,
+    help="Decryption password for the bundle",
+)
+@click.option(
+    "--output",
+    "output_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Output path for restored file",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Overwrite existing output files",
+)
+@click.option(
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Show detailed output including skipped token list",
+)
+def restore(
+    file: Path,
+    bundle_path: Path,
+    password: str,
+    output_path: Path | None,
+    force: bool,
+    verbose: bool,
+) -> None:
+    """Restore FILE from a sanitized xlsx using the encrypted BUNDLE."""
+    from xlcloak.restorer import Restorer
+
+    try:
+        result = Restorer(password).run(file, bundle_path, output_path, force)
+    except ValueError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        sys.exit(1)
+    except click.UsageError:
+        raise
+    except Exception as exc:
+        click.echo(f"Error: {exc}", err=True)
+        sys.exit(1)
+
+    click.echo(f"Restored: {result.restored_path}")
+    click.echo(f"Manifest: {result.manifest_path}")
+    click.echo(f"Cells restored: {result.restored_count}")
+
+    if result.skipped_count > 0:
+        click.echo(f"Skipped (AI-modified): {result.skipped_count}")
+
+    if verbose and result.skipped_cells:
+        click.echo("")
+        click.echo("Skipped tokens:")
+        for sc in result.skipped_cells:
+            click.echo(f"  {sc['token']} (was: {sc['original']})")
+
+
+@main.command()
+@click.argument("file", type=click.Path(exists=True, path_type=Path))
+@click.option(
     "--verbose",
     is_flag=True,
     default=False,
