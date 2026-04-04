@@ -13,6 +13,7 @@ from xlcloak.bundle import DEFAULT_PASSWORD, BundleWriter
 from xlcloak.detector import PiiDetector
 from xlcloak.excel_io import WorkbookReader, WorkbookWriter
 from xlcloak.manifest import Manifest
+from xlcloak.models import EntityType
 from xlcloak.token_engine import TokenRegistry
 
 
@@ -101,6 +102,7 @@ class Sanitizer:
         output_path: Path | None = None,
         force: bool = False,
         bundle_path: Path | None = None,
+        hide_all: bool = False,
     ) -> SanitizeResult:
         """Run the full sanitize pipeline on *input_path*.
 
@@ -135,12 +137,19 @@ class Sanitizer:
         patches: list[tuple[str, int, int, str]] = []
         cells_with_pii: int = 0
 
-        for cell in text_cells:
-            scan_results, replaced_text = self._detector.detect_cell(cell, registry)
-            if scan_results:
-                all_scan_results.extend(scan_results)
-                patches.append((cell.sheet_name, cell.row, cell.col, replaced_text))
-                cells_with_pii += 1
+        if hide_all:
+            for cell in text_cells:
+                token = registry.get_or_create(cell.value, EntityType.GENERIC)
+                patches.append((cell.sheet_name, cell.row, cell.col, token))
+            cells_with_pii = len(patches)
+            # all_scan_results stays empty — manifest entity breakdown is intentionally empty
+        else:
+            for cell in text_cells:
+                scan_results, replaced_text = self._detector.detect_cell(cell, registry)
+                if scan_results:
+                    all_scan_results.extend(scan_results)
+                    patches.append((cell.sheet_name, cell.row, cell.col, replaced_text))
+                    cells_with_pii += 1
 
         # Write sanitized xlsx
         writer = WorkbookWriter(input_path, sanitized_path)

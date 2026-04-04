@@ -61,6 +61,12 @@ def main() -> None:
     help="Overwrite existing output files",
 )
 @click.option(
+    "--hide-all",
+    is_flag=True,
+    default=False,
+    help="Replace every text cell with a stable token regardless of content",
+)
+@click.option(
     "--verbose",
     is_flag=True,
     default=False,
@@ -74,6 +80,7 @@ def sanitize(
     dry_run: bool,
     text_mode: bool,
     force: bool,
+    hide_all: bool,
     verbose: bool,
 ) -> None:
     """Sanitize FILE, producing a sanitized xlsx, encrypted bundle, and manifest."""
@@ -83,6 +90,17 @@ def sanitize(
     from xlcloak.token_engine import TokenRegistry
 
     if dry_run:
+        if hide_all:
+            try:
+                reader = WorkbookReader(file)
+                wb = reader.open()
+                n = sum(1 for _ in reader.iter_text_cells(wb))
+            except Exception as exc:
+                click.echo(f"Error: {exc}", err=True)
+                sys.exit(1)
+            click.echo(f"Dry run (hide-all): Would replace {n} text cells.")
+            click.echo("No files written.")
+            return
         try:
             detector = PiiDetector()
             registry = TokenRegistry()
@@ -140,7 +158,7 @@ def sanitize(
     try:
         detector = PiiDetector()
         sanitizer = Sanitizer(detector, password)
-        result = sanitizer.run(file, output_path, force, bundle_path)
+        result = sanitizer.run(file, output_path, force, bundle_path, hide_all=hide_all)
     except click.UsageError:
         raise
     except Exception as exc:

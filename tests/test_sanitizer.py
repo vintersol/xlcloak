@@ -110,3 +110,54 @@ def test_manifest_written(tmp_path: Path, detector: PiiDetector) -> None:
     manifest_text = result.manifest_path.read_text()
     assert "xlcloak Manifest" in manifest_text
     assert "Entity breakdown:" in manifest_text
+
+
+# ---------------------------------------------------------------------------
+# hide_all mode tests
+# ---------------------------------------------------------------------------
+
+
+def test_sanitize_hide_all_replaces_all_cells(tmp_path, simple_fixture):
+    """hide_all=True must produce a patch for every text cell in the workbook."""
+    from xlcloak.excel_io import WorkbookReader
+
+    output = tmp_path / "out.xlsx"
+    bundle = tmp_path / "out.xlcloak"
+    detector = PiiDetector()
+    sanitizer = Sanitizer(detector)
+    result = sanitizer.run(simple_fixture, output_path=output, bundle_path=bundle, hide_all=True)
+
+    # Count expected text cells
+    reader = WorkbookReader(simple_fixture)
+    wb = reader.open()
+    expected_count = sum(1 for _ in reader.iter_text_cells(wb))
+
+    assert result.cells_sanitized == expected_count, (
+        f"hide_all should replace all {expected_count} cells, got {result.cells_sanitized}"
+    )
+
+
+def test_sanitize_hide_all_uses_stable_tokens(tmp_path, simple_fixture):
+    """Same cell value must map to the same CELL_NNNN token in two hide-all runs."""
+    from openpyxl import load_workbook
+
+    detector = PiiDetector()
+
+    out1 = tmp_path / "run1_sanitized.xlsx"
+    bundle1 = tmp_path / "run1.xlcloak"
+    sanitizer1 = Sanitizer(detector)
+    result1 = sanitizer1.run(simple_fixture, output_path=out1, bundle_path=bundle1, hide_all=True)
+
+    out2 = tmp_path / "run2_sanitized.xlsx"
+    bundle2 = tmp_path / "run2.xlcloak"
+    sanitizer2 = Sanitizer(detector)
+    result2 = sanitizer2.run(simple_fixture, output_path=out2, bundle_path=bundle2, hide_all=True, force=True)
+
+    # First text cell in both outputs must have the same token
+    wb1 = load_workbook(result1.sanitized_path)
+    wb2 = load_workbook(result2.sanitized_path)
+    ws1 = wb1.active
+    ws2 = wb2.active
+    assert ws1.cell(1, 1).value == ws2.cell(1, 1).value, (
+        "Same input cell must produce same token across runs"
+    )

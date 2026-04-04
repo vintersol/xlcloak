@@ -507,3 +507,30 @@ def test_main_help_lists_all_commands() -> None:
     assert "reconcile" in result.output, f"Expected 'reconcile' in output: {result.output!r}"
     assert "deidentify" in result.output, f"Expected 'deidentify' in output: {result.output!r}"
     assert "identify" in result.output, f"Expected 'identify' in output: {result.output!r}"
+
+
+# ---------------------------------------------------------------------------
+# --hide-all flag tests
+# ---------------------------------------------------------------------------
+
+
+@no_spacy_needed
+def test_cli_hide_all_flag_in_help() -> None:
+    """--hide-all flag appears in xlcloak sanitize --help."""
+    from xlcloak.cli import sanitize
+    runner = CliRunner()
+    result = runner.invoke(sanitize, ["--help"])
+    assert "--hide-all" in result.output, f"Expected '--hide-all' in help: {result.output!r}"
+
+
+def test_cli_hide_all_dry_run(simple_fixture, tmp_path) -> None:
+    """--hide-all --dry-run prints cell count and writes no files."""
+    runner = CliRunner()
+    result = runner.invoke(main, ["sanitize", str(simple_fixture), "--hide-all", "--dry-run"])
+    assert result.exit_code == 0, result.output
+    assert "hide-all" in result.output.lower(), (
+        f"Expected 'hide-all' in output: {result.output!r}"
+    )
+    assert "Would replace" in result.output, (
+        f"Expected 'Would replace' in output: {result.output!r}"
+    )
