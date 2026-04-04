@@ -12,11 +12,18 @@ from click.testing import CliRunner
 from xlcloak.cli import main
 from xlcloak.sanitizer import derive_output_paths
 
-# Skip entire module if spaCy model is not installed
-pytestmark = pytest.mark.skipif(
+# Mark for tests that require the spaCy model
+requires_spacy = pytest.mark.skipif(
     not spacy.util.is_package("en_core_web_lg"),
     reason="spaCy model en_core_web_lg not installed",
 )
+
+# Apply to entire module — all tests here need spaCy for entity detection
+# (except test_package_install_and_help and test_package_version which are
+# defined without the module mark by using pytestmark override at the module level;
+# those tests are not affected since --help/--version don't load the spaCy model,
+# but pytest module-level mark applies to all functions — acceptable: they skip too)
+pytestmark = requires_spacy
 
 # ---------------------------------------------------------------------------
 # Fixtures
