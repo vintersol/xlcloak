@@ -290,3 +290,151 @@ def test_restore_overwrite_protection(tmp_path: Path) -> None:
     result = runner.invoke(main, ["restore", str(sanitized), "--bundle", str(bundle)])
     assert result.exit_code != 0, "Expected non-zero exit on overwrite without --force"
     assert "--force" in result.output, f"Expected '--force' hint in output: {result.output!r}"
+
+
+# ---------------------------------------------------------------------------
+# diff command tests
+# (These tests do not require the spaCy model — override module-level mark)
+# ---------------------------------------------------------------------------
+
+# Marker that always runs (counterpart to the module-level requires_spacy mark)
+no_spacy_needed = pytest.mark.skipif(False, reason="no spaCy needed")
+
+
+@no_spacy_needed
+def test_diff_help() -> None:
+    """xlcloak diff --help exits 0 and shows --bundle and --verbose options."""
+    runner = CliRunner()
+    result = runner.invoke(main, ["diff", "--help"])
+
+    assert result.exit_code == 0, f"Expected exit 0: {result.output}"
+    assert "--bundle" in result.output, f"Expected '--bundle' in output: {result.output!r}"
+    assert "--verbose" in result.output, f"Expected '--verbose' in output: {result.output!r}"
+    assert "--password" in result.output, f"Expected '--password' in output: {result.output!r}"
+
+
+def test_diff_no_changes(tmp_path: Path) -> None:
+    """diff with no AI changes shows 'No tokens changed by AI.' and 'No files written.'."""
+    sanitized, bundle = _make_sanitized_xlsx_and_bundle(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main, ["diff", str(sanitized), "--bundle", str(bundle)]
+    )
+
+    assert result.exit_code == 0, f"Expected exit 0: {result.output}\n{result.exception}"
+    assert "No tokens changed by AI." in result.output, (
+        f"Expected 'No tokens changed by AI.' in output: {result.output!r}"
+    )
+    assert "No files written." in result.output, (
+        f"Expected 'No files written.' in output: {result.output!r}"
+    )
+
+
+def test_diff_with_ai_changes(tmp_path: Path) -> None:
+    """diff with AI-modified cells shows changed token count and table."""
+    # Build a sanitized xlsx where tokens have been replaced by AI (tokens are absent)
+    ai_modified = tmp_path / "data_ai.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.cell(row=1, column=1).value = "John Smith"  # AI replaced token with original-like text
+    ws.cell(row=2, column=1).value = "some other text"
+    wb.save(str(ai_modified))
+
+    # Write bundle with tokens that are no longer in the file
+    forward_map = {
+        "John Smith": "PERSON_001",
+        "john@example.com": "EMAIL_002@example.com",
+    }
+    reverse_map = {v: k for k, v in forward_map.items()}
+    bundle = tmp_path / "data.xlcloak"
+    BundleWriter(DEFAULT_PASSWORD).write(
+        bundle,
+        forward_map=forward_map,
+        reverse_map=reverse_map,
+        original_filename="data.xlsx",
+        sheets_processed=["Sheet1"],
+        token_count=len(forward_map),
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main, ["diff", str(ai_modified), "--bundle", str(bundle)]
+    )
+
+    assert result.exit_code == 0, f"Expected exit 0: {result.output}\n{result.exception}"
+    assert "token(s) changed by AI" in result.output or "changed by AI" in result.output, (
+        f"Expected changed-token message in output: {result.output!r}"
+    )
+    assert "No files written." in result.output, (
+        f"Expected 'No files written.' in output: {result.output!r}"
+    )
+
+
+def test_diff_verbose_shows_unchanged(tmp_path: Path) -> None:
+    """diff --verbose shows unchanged tokens in addition to changed ones."""
+    # Build a sanitized xlsx where ONE token is still there, one is missing
+    partial_sanitized = tmp_path / "partial_sanitized.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.cell(row=1, column=1).value = "PERSON_001"  # still in file (unchanged)
+    # EMAIL_002@example.com is missing (AI changed it)
+    wb.save(str(partial_sanitized))
+
+    forward_map = {
+        "John Smith": "PERSON_001",
+        "john@example.com": "EMAIL_002@example.com",
+    }
+    reverse_map = {v: k for k, v in forward_map.items()}
+    bundle = tmp_path / "data.xlcloak"
+    BundleWriter(DEFAULT_PASSWORD).write(
+        bundle,
+        forward_map=forward_map,
+        reverse_map=reverse_map,
+        original_filename="data.xlsx",
+        sheets_processed=["Sheet1"],
+        token_count=len(forward_map),
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main, ["diff", str(partial_sanitized), "--bundle", str(bundle), "--verbose"]
+    )
+
+    assert result.exit_code == 0, f"Expected exit 0: {result.output}\n{result.exception}"
+    assert "Unchanged tokens" in result.output, (
+        f"Expected 'Unchanged tokens' in output: {result.output!r}"
+    )
+    assert "No files written." in result.output, (
+        f"Expected 'No files written.' in output: {result.output!r}"
+    )
+
+
+def test_diff_wrong_password(tmp_path: Path) -> None:
+    """diff with wrong password exits non-zero and shows error."""
+    sanitized, bundle = _make_sanitized_xlsx_and_bundle(tmp_path)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main, ["diff", str(sanitized), "--bundle", str(bundle), "--password", "wrong_pw"]
+    )
+
+    assert result.exit_code != 0, f"Expected non-zero exit: {result.output}"
+    assert "Error" in result.output or "Error" in (result.stderr or ""), (
+        f"Expected 'Error' in output or stderr: {result.output!r}"
+    )
+
+
+def test_diff_no_files_written(tmp_path: Path) -> None:
+    """diff command writes no files to disk."""
+    sanitized, bundle = _make_sanitized_xlsx_and_bundle(tmp_path)
+    files_before = set(tmp_path.iterdir())
+
+    runner = CliRunner()
+    runner.invoke(main, ["diff", str(sanitized), "--bundle", str(bundle)])
+
+    files_after = set(tmp_path.iterdir())
+    new_files = files_after - files_before
+    assert not new_files, f"Expected no new files, but found: {new_files}"

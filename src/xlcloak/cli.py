@@ -330,3 +330,105 @@ def inspect(file: Path, verbose: bool) -> None:
 
     click.echo("")
     click.echo("No files written.")
+
+
+@main.command()
+@click.argument("file", type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--bundle",
+    "bundle_path",
+    required=True,
+    type=click.Path(exists=True, path_type=Path),
+    help="Path to the .xlcloak restore bundle",
+)
+@click.option(
+    "--password",
+    default=DEFAULT_PASSWORD,
+    show_default=True,
+    help="Decryption password for the bundle",
+)
+@click.option(
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Also show unchanged token cells and new cells",
+)
+def diff(file: Path, bundle_path: Path, password: str, verbose: bool) -> None:
+    """Show what changed between a sanitized FILE and its BUNDLE — no files written."""
+    from xlcloak.bundle import BundleReader
+    from xlcloak.excel_io import WorkbookReader
+
+    try:
+        payload = BundleReader(password).read(bundle_path)
+    except ValueError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        sys.exit(1)
+    except Exception as exc:
+        click.echo(f"Error: {exc}", err=True)
+        sys.exit(1)
+
+    reverse_map: dict[str, str] = payload.get("reverse_map", {})
+
+    try:
+        reader = WorkbookReader(file)
+        wb = reader.open()
+    except Exception as exc:
+        click.echo(f"Error: {exc}", err=True)
+        sys.exit(1)
+
+    # Walk all text cells; classify as token (still present) or non-token
+    found_tokens: dict[str, list[tuple[str, str]]] = {}  # token -> [(sheet, cell_addr), ...]
+    non_token_count = 0
+
+    for cell_ref in reader.iter_text_cells(wb):
+        if cell_ref.value in reverse_map:
+            cell_addr = get_column_letter(cell_ref.col) + str(cell_ref.row)
+            found_tokens.setdefault(cell_ref.value, []).append(
+                (cell_ref.sheet_name, cell_addr)
+            )
+        else:
+            non_token_count += 1
+
+    # Tokens in bundle but no longer present in the file -> AI changed them
+    missing_tokens = set(reverse_map.keys()) - set(found_tokens.keys())
+
+    # Summary header
+    if missing_tokens:
+        click.echo(f"{len(missing_tokens)} token(s) changed by AI.")
+    else:
+        click.echo("No tokens changed by AI.")
+
+    # Table of missing (AI-modified) tokens
+    if missing_tokens:
+        click.echo("")
+        click.echo(f"{len(missing_tokens)} token(s) modified by AI (no longer present in file):")
+        console = Console()
+        table = Table(show_header=True, header_style="bold")
+        table.add_column("Token")
+        table.add_column("Original Value")
+        for token in sorted(missing_tokens):
+            table.add_row(token, reverse_map[token])
+        console.print(table)
+
+    # Verbose: also show unchanged tokens and non-token cell count
+    if verbose:
+        click.echo("")
+        if found_tokens:
+            click.echo(f"Unchanged tokens ({len(found_tokens)}):")
+            console = Console()
+            vtable = Table(show_header=True, header_style="bold")
+            vtable.add_column("Sheet")
+            vtable.add_column("Cell")
+            vtable.add_column("Token")
+            vtable.add_column("Original")
+            for token, locations in sorted(found_tokens.items()):
+                for sheet_name, cell_addr in locations:
+                    vtable.add_row(sheet_name, cell_addr, token, reverse_map[token])
+            console.print(vtable)
+        else:
+            click.echo("Unchanged tokens (0): none")
+
+        click.echo(f"Non-token cells: {non_token_count}")
+
+    click.echo("")
+    click.echo("No files written.")
