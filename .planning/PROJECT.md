@@ -28,14 +28,14 @@ Sensitive text in Excel files never reaches AI tools, and the round-trip back to
 - [x] User can restore a sanitized `.xlsx` from its bundle, with conflict-aware reconciliation — *Validated in Phase 3: restore-diff*
 - [x] User can diff a sanitized file against its bundle to see what changed — *Validated in Phase 3: restore-diff*
 - [x] User can reconcile a modified sanitized file against its bundle — *Validated in Phase 3: restore-diff (reconcile alias)*
-- [ ] Token mode: sensitive text replaced with stable, shape-preserving tokens (names, orgs, emails, phones, SSNs)
-- [ ] Hide-all mode: every text cell replaced with a stable token
-- [ ] Same source value always maps to the same token across the entire workbook
-- [ ] Detection via pattern recognizers (Swedish personnummer, org-nummer)
+- [x] Token mode: sensitive text replaced with stable, shape-preserving tokens (names, orgs, emails, phones, SSNs) — *Validated in Phase 4: power-features*
+- [x] Hide-all mode: every text cell replaced with a stable token — *Validated in Phase 4: power-features (--hide-all flag)*
+- [x] Same source value always maps to the same token across the entire workbook — *Validated in Phase 4: power-features*
+- [x] Detection via pattern recognizers (Swedish personnummer, org-nummer) — *Validated in Phase 4: power-features (SwePersonnummerRecognizer, SweOrgNummerRecognizer)*
 - [ ] Detection via NER recognizers (person, organization, location)
-- [ ] Detection boosted by workbook context (column headers, sheet structure)
+- [x] Detection boosted by workbook context (column headers, sheet structure) — *Validated in Phase 4: power-features (column-header context boosting)*
 - [ ] User-supplied domain configuration (dictionaries, per-column overrides, deny/allow lists)
-- [ ] Company and legal entity names detected as first-class entities
+- [x] Company and legal entity names detected as first-class entities — *Validated in Phase 4: power-features (CompanySuffixRecognizer)*
 - [ ] Encrypted `.xlcloak` restore bundle (Fernet, password-derived key)
 - [ ] Manifest file documenting coverage, transformations, and risk notes
 - [x] Restore performs conflict-aware reconciliation (unchanged cells restored, changed cells skipped, new cells untouched) — *Validated in Phase 3: restore-diff*
@@ -97,4 +97,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-04 after Phase 2 completion*
+*Last updated: 2026-04-04 after Phase 4 completion — v1.0 milestone all 4 phases complete*
