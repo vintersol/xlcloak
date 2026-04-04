@@ -29,7 +29,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Bundle & Restore
 
 - [x] **BUN-01**: Sanitize command produces an encrypted `.xlcloak` restore bundle (Fernet, password-derived key)
-- [ ] **BUN-02**: Sanitize command produces a manifest file documenting coverage, transformations, and risk notes
+- [x] **BUN-02**: Sanitize command produces a manifest file documenting coverage, transformations, and risk notes
 - [ ] **BUN-03**: Restore command restores original values from bundle with conflict-aware reconciliation
 - [ ] **BUN-04**: Reconciliation: unchanged sanitized cells restored automatically, changed cells skipped, new cells untouched
 - [ ] **BUN-05**: Reconciliation report included in restore output showing what was restored, skipped, and conflicted
@@ -44,12 +44,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### CLI & Distribution
 
-- [ ] **CLI-01**: User can run `xlcloak sanitize <file.xlsx>` to produce sanitized file + bundle + manifest
+- [x] **CLI-01**: User can run `xlcloak sanitize <file.xlsx>` to produce sanitized file + bundle + manifest
 - [ ] **CLI-02**: User can run `xlcloak restore <file.xlsx> --bundle <bundle.xlcloak>` to restore originals
 - [ ] **CLI-03**: User can run `xlcloak inspect <file.xlsx>` for dry-run preview with no files written
 - [ ] **CLI-04**: User can run `xlcloak diff <file.xlsx> --bundle <bundle.xlcloak>` to compare changes
 - [ ] **CLI-05**: User can run `xlcloak reconcile <file.xlsx> --bundle <bundle.xlcloak>` for explicit reconciliation
-- [ ] **CLI-06**: CLI supports `--output`, `--dry-run`, `--text-mode`, `--verbose`, `--bundle` flags
+- [x] **CLI-06**: CLI supports `--output`, `--dry-run`, `--text-mode`, `--verbose`, `--bundle` flags
 - [ ] **CLI-07**: Compatibility aliases: `deidentify` -> `sanitize`, `identify` -> `restore`
 - [ ] **CLI-08**: Published to PyPI, installable via `pip install xlcloak`
 - [ ] **CLI-09**: Supports Python 3.10+, cross-platform (Windows, macOS, Linux)
@@ -116,17 +116,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-03 | Phase 1 | Complete |
 | TEST-04 | Phase 1 | Complete |
 | BUN-01 | Phase 2 | Complete |
-| BUN-02 | Phase 2 | Pending |
+| BUN-02 | Phase 2 | Complete |
 | BUN-03 | Phase 3 | Pending |
 | BUN-04 | Phase 3 | Pending |
 | BUN-05 | Phase 3 | Pending |
 | BUN-06 | Phase 3 | Pending |
-| CLI-01 | Phase 2 | Pending |
+| CLI-01 | Phase 2 | Complete |
 | CLI-02 | Phase 3 | Pending |
 | CLI-03 | Phase 2 | Pending |
 | CLI-04 | Phase 3 | Pending |
 | CLI-05 | Phase 3 | Pending |
-| CLI-06 | Phase 2 | Pending |
+| CLI-06 | Phase 2 | Complete |
 | CLI-07 | Phase 3 | Pending |
 | CLI-08 | Phase 2 | Pending |
 | CLI-09 | Phase 2 | Pending |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-core-sanitize-02-PLAN.md
-last_updated: "2026-04-04T04:41:06.366Z"
+stopped_at: Completed 02-core-sanitize-03-PLAN.md
+last_updated: "2026-04-04T04:49:05.525Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 6
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 ## Current Position
 
 Phase: 02 (core-sanitize) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-04
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-foundation P02 | 3 | 2 tasks | 5 files |
 | Phase 01-foundation P03 | 2 | 2 tasks | 5 files |
 | Phase 02-core-sanitize P02 | 2 | 2 tasks | 3 files |
+| Phase 02-core-sanitize P03 | 20 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,8 @@ Recent decisions affecting current work:
 - [Phase 01-foundation]: Hard fixture formula detection relies on openpyxl data_type='f' — formulas written as strings preserve scan_surfaces detection
 - [Phase 02-core-sanitize]: PBKDF2_ITERATIONS = 600_000 chosen (OWASP 2023 over NIST 480k) — resolves STATE.md blocker
 - [Phase 02-core-sanitize]: Password mode flag ('default'/'custom') stored in bundle payload for Phase 3 CLI restore UX
+- [Phase 02-core-sanitize]: Lazy import of PiiDetector inside sanitize CLI command body to avoid loading spaCy model on xlcloak --help
+- [Phase 02-core-sanitize]: cells_sanitized counts distinct cells with PII (not total detections) - consistent with Manifest semantics
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T04:41:06.363Z
-Stopped at: Completed 02-core-sanitize-02-PLAN.md
+Last session: 2026-04-04T04:49:05.522Z
+Stopped at: Completed 02-core-sanitize-03-PLAN.md
 Resume file: None
