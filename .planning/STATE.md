@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04-power-features-04-02-PLAN.md
-last_updated: "2026-04-04T15:52:27.856Z"
+status: verifying
+stopped_at: Completed 04-power-features-04-03-PLAN.md
+last_updated: "2026-04-04T16:00:29.640Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 
 Phase: 04 (power-features) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-04
 
 Progress: [░░░░░░░░░░] 0%
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-restore-diff P02 | 4 | 2 tasks | 2 files |
 | Phase 04-power-features P01 | 736 | 3 tasks | 6 files |
 | Phase 04-power-features P02 | 7 | 2 tasks | 8 files |
+| Phase 04-power-features P03 | 6 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,9 @@ Recent decisions affecting current work:
 - [Phase 04-power-features]: CompanySuffixRecognizer.validate_result() checks isupper() to enforce case-sensitive first word (Presidio IGNORECASE workaround)
 - [Phase 04-power-features]: Span deduplication in detect_cell() keeps highest-score result per (start,end) span — prevents double-replacement when CompanySuffixRecognizer and NER ORGANIZATION fire on same text
 - [Phase 04-power-features]: Sanitizer.run(hide_all=True) skips PII detection entirely and wraps all text cells with EntityType.GENERIC — no spaCy init in hide-all mode
+- [Phase 04-power-features]: Header keyword matching uses substring check (any(kw in header.lower())) — handles compound headers like Customer Name naturally
+- [Phase 04-power-features]: Boosted threshold is 0.3 vs default 0.4 — applied when column_header matches _PII_HEADER_KEYWORDS
+- [Phase 04-power-features]: hide_all=True branch left unchanged — tokenizes ALL cells including row-1; header distinction only in normal detection mode
 
 ### Pending Todos
 
@@ -119,6 +123,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T15:52:27.850Z
-Stopped at: Completed 04-power-features-04-02-PLAN.md
+Last session: 2026-04-04T16:00:29.635Z
+Stopped at: Completed 04-power-features-04-03-PLAN.md
 Resume file: None

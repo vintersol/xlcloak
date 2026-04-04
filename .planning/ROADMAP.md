@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation** - Token engine correctness and validated Excel I/O pipeline (completed 2026-04-03)
 - [x] **Phase 2: Core Sanitize** - Working sanitize command with detection, encrypted bundle, and manifest (completed 2026-04-04)
 - [x] **Phase 3: Restore & Diff** - Complete round-trip with conflict-aware reconciliation and diff (completed 2026-04-04)
-- [ ] **Phase 4: Power Features** - Swedish PII, context-aware detection, hide-all mode, entity detection
+- [x] **Phase 4: Power Features** - Swedish PII, context-aware detection, hide-all mode, entity detection (completed 2026-04-04)
 
 ## Phase Details
 
@@ -78,12 +78,12 @@ Plans:
   2. Detection confidence is visibly higher for cells in columns whose headers indicate PII (e.g., "Customer", "Name", "Contact") compared to unheaded columns
   3. Company and legal entity names (AB, Ltd, GmbH, Inc, LLC suffixes) are detected as first-class entities, not just caught incidentally by NER
   4. User can run `xlcloak sanitize file.xlsx --hide-all` and every text cell is replaced with a stable token regardless of content
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 04-01-PLAN.md — Swedish recognizers + EntityType.GENERIC (SwePersonnummerRecognizer, SweOrgNummerRecognizer, Luhn validation, CELL_NNNN token)
 - [x] 04-02-PLAN.md — CompanySuffixRecognizer + --hide-all mode (company detection, hide-all Sanitizer branch, CLI flag)
-- [ ] 04-03-PLAN.md — Column-header context boosting + integration test (header pre-pass, detect_cell column_header param, row-1 skip guard)
+- [x] 04-03-PLAN.md — Column-header context boosting + integration test (header pre-pass, detect_cell column_header param, row-1 skip guard)
 
 ## Progress
 
@@ -95,4 +95,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Foundation | 3/3 | Complete   | 2026-04-03 |
 | 2. Core Sanitize | 4/4 | Complete   | 2026-04-04 |
 | 3. Restore & Diff | 2/2 | Complete   | 2026-04-04 |
-| 4. Power Features | 2/3 | In Progress|  |
+| 4. Power Features | 3/3 | Complete   | 2026-04-04 |
