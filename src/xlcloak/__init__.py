@@ -5,7 +5,6 @@ from __future__ import annotations
 __version__ = "0.1.0"
 
 from xlcloak.bundle import BundleReader, BundleWriter
-from xlcloak.detector import PiiDetector
 from xlcloak.excel_io import WorkbookReader, WorkbookWriter
 from xlcloak.manifest import Manifest
 from xlcloak.models import EntityType
@@ -19,7 +18,6 @@ __all__ = [
     "BundleWriter",
     "EntityType",
     "Manifest",
-    "PiiDetector",
     "RestoreResult",
     "Restorer",
     "SanitizeResult",
