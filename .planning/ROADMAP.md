@@ -50,7 +50,7 @@ Plans:
 
 Plans:
 - [ ] 02-01-PLAN.md — PII detection pipeline (PiiDetector wrapping Presidio, entity mapping, multi-entity replacement)
-- [ ] 02-02-PLAN.md — Encrypted bundle writer/reader (Fernet + PBKDF2HMAC, JSON payload, salt handling)
+- [x] 02-02-PLAN.md — Encrypted bundle writer/reader (Fernet + PBKDF2HMAC, JSON payload, salt handling)
 - [ ] 02-03-PLAN.md — Sanitizer orchestrator + sanitize CLI command (read -> detect -> tokenize -> write -> bundle -> manifest)
 - [ ] 02-04-PLAN.md — Inspect CLI command + packaging finalization (dry-run preview, rich table, PyPI metadata)
 

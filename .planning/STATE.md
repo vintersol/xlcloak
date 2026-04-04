@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 2 context gathered
-last_updated: "2026-04-03T19:25:17.768Z"
-last_activity: 2026-04-03
+status: executing
+stopped_at: Completed 02-core-sanitize-02-PLAN.md
+last_updated: "2026-04-04T04:41:06.366Z"
+last_activity: 2026-04-04
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 7
+  completed_plans: 4
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-03)
 
 **Core value:** Sensitive text in Excel files never reaches AI tools, and the round-trip back to originals is reliable and conflict-aware.
-**Current focus:** Phase 01 — foundation
+**Current focus:** Phase 02 — core-sanitize
 
 ## Current Position
 
-Phase: 2
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-03
+Phase: 02 (core-sanitize) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-04-04
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -55,6 +55,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-foundation P01 | 3 | 2 tasks | 7 files |
 | Phase 01-foundation P02 | 3 | 2 tasks | 5 files |
 | Phase 01-foundation P03 | 2 | 2 tasks | 5 files |
+| Phase 02-core-sanitize P02 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ Recent decisions affecting current work:
 - [Phase 01-foundation]: Copy-then-patch strategy: shutil.copy2 then openpyxl patch preserves all non-text content
 - [Phase 01-foundation]: Committed .xlsx binaries to repo — CI needs them without running generator; binary diffs are small
 - [Phase 01-foundation]: Hard fixture formula detection relies on openpyxl data_type='f' — formulas written as strings preserve scan_surfaces detection
+- [Phase 02-core-sanitize]: PBKDF2_ITERATIONS = 600_000 chosen (OWASP 2023 over NIST 480k) — resolves STATE.md blocker
+- [Phase 02-core-sanitize]: Password mode flag ('default'/'custom') stored in bundle payload for Phase 3 CLI restore UX
 
 ### Pending Todos
 
@@ -90,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T19:25:17.754Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-core-sanitize/02-CONTEXT.md
+Last session: 2026-04-04T04:41:06.363Z
+Stopped at: Completed 02-core-sanitize-02-PLAN.md
+Resume file: None

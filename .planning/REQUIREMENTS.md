@@ -28,7 +28,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Bundle & Restore
 
-- [ ] **BUN-01**: Sanitize command produces an encrypted `.xlcloak` restore bundle (Fernet, password-derived key)
+- [x] **BUN-01**: Sanitize command produces an encrypted `.xlcloak` restore bundle (Fernet, password-derived key)
 - [ ] **BUN-02**: Sanitize command produces a manifest file documenting coverage, transformations, and risk notes
 - [ ] **BUN-03**: Restore command restores original values from bundle with conflict-aware reconciliation
 - [ ] **BUN-04**: Reconciliation: unchanged sanitized cells restored automatically, changed cells skipped, new cells untouched
@@ -115,7 +115,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-02 | Phase 1 | Complete |
 | TEST-03 | Phase 1 | Complete |
 | TEST-04 | Phase 1 | Complete |
-| BUN-01 | Phase 2 | Pending |
+| BUN-01 | Phase 2 | Complete |
 | BUN-02 | Phase 2 | Pending |
 | BUN-03 | Phase 3 | Pending |
 | BUN-04 | Phase 3 | Pending |
