@@ -15,7 +15,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **DET-04**: User can detect and replace URLs with stable tokens
 - [x] **DET-05**: User can detect and replace Swedish personnummer (with Luhn checksum validation)
 - [x] **DET-06**: User can detect and replace Swedish org-nummer (with checksum validation)
-- [ ] **DET-07**: User can detect and replace company/legal entity names (AB, Ltd, GmbH, Inc, LLC suffixes boost detection)
+- [x] **DET-07**: User can detect and replace company/legal entity names (AB, Ltd, GmbH, Inc, LLC suffixes boost detection)
 - [ ] **DET-08**: Detection confidence is boosted by column header context (e.g., "Customer" column boosts NER)
 - [x] **DET-09**: Unsupported surfaces (formulas, comments, charts, VBA, etc.) are logged as warnings in the manifest
 
@@ -24,7 +24,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TOK-01**: Same source value always maps to the same token across the entire workbook
 - [x] **TOK-02**: Tokens are human-readable and type-prefixed (e.g., PERSON_001, ORG_001, SSN_SE_001)
 - [x] **TOK-03**: Tokens preserve the shape of the original value where possible (email stays email-shaped, phone stays phone-shaped)
-- [ ] **TOK-04**: Hide-all mode replaces every text cell with a stable token regardless of content
+- [x] **TOK-04**: Hide-all mode replaces every text cell with a stable token regardless of content
 
 ### Bundle & Restore
 
@@ -104,13 +104,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DET-04 | Phase 2 | Complete |
 | DET-05 | Phase 4 | Complete |
 | DET-06 | Phase 4 | Complete |
-| DET-07 | Phase 4 | Pending |
+| DET-07 | Phase 4 | Complete |
 | DET-08 | Phase 4 | Pending |
 | DET-09 | Phase 1 | Complete |
 | TOK-01 | Phase 1 | Complete |
 | TOK-02 | Phase 1 | Complete |
 | TOK-03 | Phase 1 | Complete |
-| TOK-04 | Phase 4 | Pending |
+| TOK-04 | Phase 4 | Complete |
 | TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 1 | Complete |
 | TEST-03 | Phase 1 | Complete |

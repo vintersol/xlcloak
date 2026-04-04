@@ -78,11 +78,11 @@ Plans:
   2. Detection confidence is visibly higher for cells in columns whose headers indicate PII (e.g., "Customer", "Name", "Contact") compared to unheaded columns
   3. Company and legal entity names (AB, Ltd, GmbH, Inc, LLC suffixes) are detected as first-class entities, not just caught incidentally by NER
   4. User can run `xlcloak sanitize file.xlsx --hide-all` and every text cell is replaced with a stable token regardless of content
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 - [x] 04-01-PLAN.md — Swedish recognizers + EntityType.GENERIC (SwePersonnummerRecognizer, SweOrgNummerRecognizer, Luhn validation, CELL_NNNN token)
-- [ ] 04-02-PLAN.md — CompanySuffixRecognizer + --hide-all mode (company detection, hide-all Sanitizer branch, CLI flag)
+- [x] 04-02-PLAN.md — CompanySuffixRecognizer + --hide-all mode (company detection, hide-all Sanitizer branch, CLI flag)
 - [ ] 04-03-PLAN.md — Column-header context boosting + integration test (header pre-pass, detect_cell column_header param, row-1 skip guard)
 
 ## Progress
@@ -95,4 +95,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Foundation | 3/3 | Complete   | 2026-04-03 |
 | 2. Core Sanitize | 4/4 | Complete   | 2026-04-04 |
 | 3. Restore & Diff | 2/2 | Complete   | 2026-04-04 |
-| 4. Power Features | 1/3 | In Progress|  |
+| 4. Power Features | 2/3 | In Progress|  |

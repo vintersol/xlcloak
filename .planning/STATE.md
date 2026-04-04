@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-power-features-04-01-PLAN.md
-last_updated: "2026-04-04T15:42:16.014Z"
+stopped_at: Completed 04-power-features-04-02-PLAN.md
+last_updated: "2026-04-04T15:52:27.856Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-03)
 ## Current Position
 
 Phase: 04 (power-features) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-04
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-restore-diff P01 | 4 | 2 tasks | 5 files |
 | Phase 03-restore-diff P02 | 4 | 2 tasks | 2 files |
 | Phase 04-power-features P01 | 736 | 3 tasks | 6 files |
+| Phase 04-power-features P02 | 7 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,9 @@ Recent decisions affecting current work:
 - [Phase 04-power-features]: validate_result() returns True/False never mutates self.score — class-level attribute would corrupt subsequent recognitions
 - [Phase 04-power-features]: Recognizers registered via self._analyzer.registry.add_recognizer() not AnalyzerEngine.add_recognizer() (API differs from plan example in installed Presidio version)
 - [Phase 04-power-features]: SweOrgNummerRecognizer requires hyphen (NNNNNN-NNNN) while SwePersonnummerRecognizer accepts 10-digit with or without separator
+- [Phase 04-power-features]: CompanySuffixRecognizer.validate_result() checks isupper() to enforce case-sensitive first word (Presidio IGNORECASE workaround)
+- [Phase 04-power-features]: Span deduplication in detect_cell() keeps highest-score result per (start,end) span — prevents double-replacement when CompanySuffixRecognizer and NER ORGANIZATION fire on same text
+- [Phase 04-power-features]: Sanitizer.run(hide_all=True) skips PII detection entirely and wraps all text cells with EntityType.GENERIC — no spaCy init in hide-all mode
 
 ### Pending Todos
 
@@ -115,6 +119,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T15:42:16.010Z
-Stopped at: Completed 04-power-features-04-01-PLAN.md
+Last session: 2026-04-04T15:52:27.850Z
+Stopped at: Completed 04-power-features-04-02-PLAN.md
 Resume file: None
