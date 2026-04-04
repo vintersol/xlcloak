@@ -9,6 +9,7 @@ from xlcloak.detector import PiiDetector
 from xlcloak.excel_io import WorkbookReader, WorkbookWriter
 from xlcloak.manifest import Manifest
 from xlcloak.models import EntityType
+from xlcloak.restorer import RestoreResult, Restorer
 from xlcloak.sanitizer import SanitizeResult, Sanitizer
 from xlcloak.token_engine import TokenFormatter, TokenRegistry
 
@@ -19,6 +20,8 @@ __all__ = [
     "EntityType",
     "Manifest",
     "PiiDetector",
+    "RestoreResult",
+    "Restorer",
     "SanitizeResult",
     "Sanitizer",
     "TokenFormatter",
