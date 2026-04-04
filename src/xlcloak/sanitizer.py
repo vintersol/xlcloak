@@ -144,8 +144,22 @@ class Sanitizer:
             cells_with_pii = len(patches)
             # all_scan_results stays empty — manifest entity breakdown is intentionally empty
         else:
+            # Pre-pass: extract column headers from row-1 cells, grouped by sheet
+            # Structure: {sheet_name: {col_index: header_text}}
+            # text_cells is already a list, so this iteration is safe
+            sheet_headers: dict[str, dict[int, str]] = {}
             for cell in text_cells:
-                scan_results, replaced_text = self._detector.detect_cell(cell, registry)
+                if cell.row == 1:
+                    sheet_headers.setdefault(cell.sheet_name, {})[cell.col] = cell.value or ""
+
+            for cell in text_cells:
+                if cell.row == 1:
+                    continue  # Never tokenize header row cells
+
+                col_header = sheet_headers.get(cell.sheet_name, {}).get(cell.col)
+                scan_results, replaced_text = self._detector.detect_cell(
+                    cell, registry, column_header=col_header
+                )
                 if scan_results:
                     all_scan_results.extend(scan_results)
                     patches.append((cell.sheet_name, cell.row, cell.col, replaced_text))
