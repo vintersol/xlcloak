@@ -30,9 +30,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **BUN-01**: Sanitize command produces an encrypted `.xlcloak` restore bundle (Fernet, password-derived key)
 - [x] **BUN-02**: Sanitize command produces a manifest file documenting coverage, transformations, and risk notes
-- [ ] **BUN-03**: Restore command restores original values from bundle with conflict-aware reconciliation
-- [ ] **BUN-04**: Reconciliation: unchanged sanitized cells restored automatically, changed cells skipped, new cells untouched
-- [ ] **BUN-05**: Reconciliation report included in restore output showing what was restored, skipped, and conflicted
+- [x] **BUN-03**: Restore command restores original values from bundle with conflict-aware reconciliation
+- [x] **BUN-04**: Reconciliation: unchanged sanitized cells restored automatically, changed cells skipped, new cells untouched
+- [x] **BUN-05**: Reconciliation report included in restore output showing what was restored, skipped, and conflicted
 - [ ] **BUN-06**: Diff command compares a sanitized file against its bundle to show what changed
 
 ### Test Fixtures
@@ -45,7 +45,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### CLI & Distribution
 
 - [x] **CLI-01**: User can run `xlcloak sanitize <file.xlsx>` to produce sanitized file + bundle + manifest
-- [ ] **CLI-02**: User can run `xlcloak restore <file.xlsx> --bundle <bundle.xlcloak>` to restore originals
+- [x] **CLI-02**: User can run `xlcloak restore <file.xlsx> --bundle <bundle.xlcloak>` to restore originals
 - [x] **CLI-03**: User can run `xlcloak inspect <file.xlsx>` for dry-run preview with no files written
 - [ ] **CLI-04**: User can run `xlcloak diff <file.xlsx> --bundle <bundle.xlcloak>` to compare changes
 - [ ] **CLI-05**: User can run `xlcloak reconcile <file.xlsx> --bundle <bundle.xlcloak>` for explicit reconciliation
@@ -117,12 +117,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-04 | Phase 1 | Complete |
 | BUN-01 | Phase 2 | Complete |
 | BUN-02 | Phase 2 | Complete |
-| BUN-03 | Phase 3 | Pending |
-| BUN-04 | Phase 3 | Pending |
-| BUN-05 | Phase 3 | Pending |
+| BUN-03 | Phase 3 | Complete |
+| BUN-04 | Phase 3 | Complete |
+| BUN-05 | Phase 3 | Complete |
 | BUN-06 | Phase 3 | Pending |
 | CLI-01 | Phase 2 | Complete |
-| CLI-02 | Phase 3 | Pending |
+| CLI-02 | Phase 3 | Complete |
 | CLI-03 | Phase 2 | Complete |
 | CLI-04 | Phase 3 | Pending |
 | CLI-05 | Phase 3 | Pending |

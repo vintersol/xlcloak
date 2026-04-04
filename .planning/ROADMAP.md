@@ -63,10 +63,10 @@ Plans:
   2. Restore output includes a reconciliation report showing exactly which cells were restored, skipped (conflict), and left untouched (new)
   3. User runs `xlcloak diff file.xlsx --bundle file.xlcloak` and sees a clear summary of what changed between the sanitized file and the bundle
   4. User can run `xlcloak reconcile` for explicit reconciliation, and compatibility aliases (`deidentify`, `identify`) route correctly to their commands
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 03-01-PLAN.md — Restorer module + restore CLI command (reconciliation engine, RestoreResult, manifest)
+- [x] 03-01-PLAN.md — Restorer module + restore CLI command (reconciliation engine, RestoreResult, manifest)
 - [ ] 03-02-PLAN.md — Diff command + CLI aliases (reconcile, deidentify, identify)
 
 ### Phase 4: Power Features
@@ -93,5 +93,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete   | 2026-04-03 |
 | 2. Core Sanitize | 4/4 | Complete   | 2026-04-04 |
-| 3. Restore & Diff | 0/2 | Not started | - |
+| 3. Restore & Diff | 1/2 | In Progress|  |
 | 4. Power Features | 0/? | Not started | - |

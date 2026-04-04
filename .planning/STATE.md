@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 context gathered (discuss mode)
-last_updated: "2026-04-04T05:48:58.632Z"
+stopped_at: Completed 03-restore-diff-01-PLAN.md
+last_updated: "2026-04-04T10:17:45.234Z"
 last_activity: 2026-04-04
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 9
+  completed_plans: 8
   percent: 0
 ---
 
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-03)
 
 **Core value:** Sensitive text in Excel files never reaches AI tools, and the round-trip back to originals is reliable and conflict-aware.
-**Current focus:** Phase 02 — core-sanitize
+**Current focus:** Phase 03 — restore-diff
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
+Phase: 03 (restore-diff) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
 Last activity: 2026-04-04
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-core-sanitize P02 | 2 | 2 tasks | 3 files |
 | Phase 02-core-sanitize P03 | 20 | 2 tasks | 5 files |
 | Phase 02-core-sanitize P04 | 4 | 2 tasks | 6 files |
+| Phase 03-restore-diff P01 | 4 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,8 @@ Recent decisions affecting current work:
 - [Phase 02-core-sanitize]: cells_sanitized counts distinct cells with PII (not total detections) - consistent with Manifest semantics
 - [Phase 02-core-sanitize]: Option A for verbose scores: extend ScanResult with score/detection_method instead of separate display path — keeps data flow clean
 - [Phase 02-core-sanitize]: inspect command filters warnings to formula/chart/comment only — merged cells and images are info-level, not actionable unsupported surfaces
+- [Phase 03-restore-diff]: Skipped detection via missing tokens: tokens in reverse_map not found in sanitized file -> AI modified (no per-cell position tracking needed)
+- [Phase 03-restore-diff]: render_report() is a standalone function not a method on Restorer, keeping RestoreResult a pure dataclass
 
 ### Pending Todos
 
@@ -99,6 +102,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-04T05:48:58.618Z
-Stopped at: Phase 3 context gathered (discuss mode)
-Resume file: .planning/phases/03-restore-diff/03-CONTEXT.md
+Last session: 2026-04-04T10:17:45.232Z
+Stopped at: Completed 03-restore-diff-01-PLAN.md
+Resume file: None
