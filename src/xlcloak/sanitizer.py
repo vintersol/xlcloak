@@ -31,12 +31,14 @@ class SanitizeResult:
 def derive_output_paths(
     input_path: Path,
     output_override: Path | None = None,
+    bundle_override: Path | None = None,
 ) -> tuple[Path, Path, Path]:
     """Derive the three output paths from input (or override) path.
 
     Args:
         input_path: Source .xlsx path.
         output_override: Optional explicit output path for the sanitized file.
+        bundle_override: Optional explicit output path for the encrypted bundle.
 
     Returns:
         Tuple of (sanitized_xlsx_path, bundle_path, manifest_path).
@@ -47,7 +49,7 @@ def derive_output_paths(
         base = input_path.parent / input_path.stem
 
     sanitized_path = base.with_name(base.name + "_sanitized").with_suffix(".xlsx")
-    bundle_path = base.with_suffix(".xlcloak")
+    bundle_path = bundle_override if bundle_override is not None else base.with_suffix(".xlcloak")
     manifest_path = base.with_name(base.name + "_manifest").with_suffix(".txt")
     return sanitized_path, bundle_path, manifest_path
 
@@ -98,6 +100,7 @@ class Sanitizer:
         input_path: Path,
         output_path: Path | None = None,
         force: bool = False,
+        bundle_path: Path | None = None,
     ) -> SanitizeResult:
         """Run the full sanitize pipeline on *input_path*.
 
@@ -113,7 +116,7 @@ class Sanitizer:
             click.UsageError: If output files exist and force is False.
         """
         sanitized_path, bundle_path, manifest_path = derive_output_paths(
-            input_path, output_path
+            input_path, output_path, bundle_path
         )
         check_overwrite([sanitized_path, bundle_path, manifest_path], force)
 

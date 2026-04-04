@@ -9,10 +9,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Detection
 
-- [ ] **DET-01**: User can detect and replace email addresses with stable tokens
-- [ ] **DET-02**: User can detect and replace phone numbers with stable tokens
-- [ ] **DET-03**: User can detect and replace person names via NER with stable tokens
-- [ ] **DET-04**: User can detect and replace URLs with stable tokens
+- [x] **DET-01**: User can detect and replace email addresses with stable tokens
+- [x] **DET-02**: User can detect and replace phone numbers with stable tokens
+- [x] **DET-03**: User can detect and replace person names via NER with stable tokens
+- [x] **DET-04**: User can detect and replace URLs with stable tokens
 - [ ] **DET-05**: User can detect and replace Swedish personnummer (with Luhn checksum validation)
 - [ ] **DET-06**: User can detect and replace Swedish org-nummer (with checksum validation)
 - [ ] **DET-07**: User can detect and replace company/legal entity names (AB, Ltd, GmbH, Inc, LLC suffixes boost detection)
@@ -98,10 +98,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DET-01 | Phase 2 | Pending |
-| DET-02 | Phase 2 | Pending |
-| DET-03 | Phase 2 | Pending |
-| DET-04 | Phase 2 | Pending |
+| DET-01 | Phase 2 | Complete |
+| DET-02 | Phase 2 | Complete |
+| DET-03 | Phase 2 | Complete |
+| DET-04 | Phase 2 | Complete |
 | DET-05 | Phase 4 | Pending |
 | DET-06 | Phase 4 | Pending |
 | DET-07 | Phase 4 | Pending |

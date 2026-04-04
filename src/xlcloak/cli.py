@@ -36,6 +36,25 @@ def main() -> None:
     help="Output path for sanitized file (bundle and manifest derive from it)",
 )
 @click.option(
+    "--bundle",
+    "bundle_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Explicit output path for the encrypted bundle (overrides default naming)",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Preview what would be sanitized without writing any files",
+)
+@click.option(
+    "--text-mode",
+    is_flag=True,
+    default=False,
+    help="Extract text cells to a plain text file without token replacement",
+)
+@click.option(
     "--force",
     is_flag=True,
     default=False,
@@ -51,12 +70,66 @@ def sanitize(
     file: Path,
     password: str,
     output_path: Path | None,
+    bundle_path: Path | None,
+    dry_run: bool,
+    text_mode: bool,
     force: bool,
     verbose: bool,
 ) -> None:
     """Sanitize FILE, producing a sanitized xlsx, encrypted bundle, and manifest."""
     from xlcloak.detector import PiiDetector
-    from xlcloak.sanitizer import Sanitizer
+    from xlcloak.excel_io import WorkbookReader
+    from xlcloak.sanitizer import Sanitizer, derive_output_paths
+    from xlcloak.token_engine import TokenRegistry
+
+    if dry_run:
+        try:
+            detector = PiiDetector()
+            registry = TokenRegistry()
+            reader = WorkbookReader(file)
+            wb = reader.open()
+            all_results = []
+            for cell_ref in reader.iter_text_cells(wb):
+                scan_results, _replaced = detector.detect_cell(cell_ref, registry)
+                all_results.extend(scan_results)
+        except Exception as exc:
+            click.echo(f"Error: {exc}", err=True)
+            sys.exit(1)
+
+        click.echo(f"Dry run: {file.name}")
+        if all_results:
+            entity_counts: dict[str, int] = {}
+            for r in all_results:
+                entity_counts[r.entity_type.value] = entity_counts.get(r.entity_type.value, 0) + 1
+            click.echo(f"Would replace {len(registry)} unique entities across {len(all_results)} detections:")
+            for etype, count in sorted(entity_counts.items()):
+                click.echo(f"  {etype}: {count}")
+        else:
+            click.echo("No entities detected — no changes would be made.")
+        click.echo("No files written.")
+        return
+
+    if text_mode:
+        try:
+            reader = WorkbookReader(file)
+            wb = reader.open()
+            text_cells = list(reader.iter_text_cells(wb))
+        except Exception as exc:
+            click.echo(f"Error: {exc}", err=True)
+            sys.exit(1)
+
+        _, _, base_manifest = derive_output_paths(file, output_path)
+        text_out = base_manifest.parent / (base_manifest.stem.replace("_manifest", "_text") + ".txt")
+        if text_out.exists() and not force:
+            click.echo(f"Error: {text_out} already exists. Use --force to overwrite.", err=True)
+            sys.exit(1)
+        lines = ["sheet\tcell\tvalue"]
+        for cell_ref in text_cells:
+            col_letter = get_column_letter(cell_ref.col)
+            lines.append(f"{cell_ref.sheet_name}\t{col_letter}{cell_ref.row}\t{cell_ref.value}")
+        text_out.write_text("\n".join(lines))
+        click.echo(f"Text extracted: {text_out} ({len(text_cells)} cells)")
+        return
 
     if password == DEFAULT_PASSWORD:
         click.echo(
@@ -67,7 +140,7 @@ def sanitize(
     try:
         detector = PiiDetector()
         sanitizer = Sanitizer(detector, password)
-        result = sanitizer.run(file, output_path, force)
+        result = sanitizer.run(file, output_path, force, bundle_path)
     except click.UsageError:
         raise
     except Exception as exc:

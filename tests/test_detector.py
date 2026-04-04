@@ -71,7 +71,7 @@ def test_email_detection(detector: PiiDetector, registry: TokenRegistry) -> None
 
 
 def test_phone_detection(detector: PiiDetector, registry: TokenRegistry) -> None:
-    cell = _make_cell("call +1-555-123-4567 to confirm")
+    cell = _make_cell("call (555) 123-4567 to confirm")
     scan_results, replaced_text = detector.detect_cell(cell, registry)
 
     phone_results = [r for r in scan_results if r.entity_type == EntityType.PHONE]

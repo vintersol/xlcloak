@@ -90,10 +90,9 @@ def test_cli_sanitize_default_password_warning(tmp_path: Path) -> None:
     fixture = tmp_path / "simple.xlsx"
     shutil.copy2(SIMPLE_FIXTURE, fixture)
 
-    runner = CliRunner(mix_stderr=False)
+    runner = CliRunner()
     result = runner.invoke(main, ["sanitize", str(fixture)])
 
-    # Warning goes to stderr; mix_stderr=False keeps them separate
     assert "default password" in result.stderr, (
         f"Expected 'default password' in stderr: {result.stderr!r}"
     )
