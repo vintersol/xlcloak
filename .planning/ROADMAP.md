@@ -63,7 +63,11 @@ Plans:
   2. Restore output includes a reconciliation report showing exactly which cells were restored, skipped (conflict), and left untouched (new)
   3. User runs `xlcloak diff file.xlsx --bundle file.xlcloak` and sees a clear summary of what changed between the sanitized file and the bundle
   4. User can run `xlcloak reconcile` for explicit reconciliation, and compatibility aliases (`deidentify`, `identify`) route correctly to their commands
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Restorer module + restore CLI command (reconciliation engine, RestoreResult, manifest)
+- [ ] 03-02-PLAN.md — Diff command + CLI aliases (reconcile, deidentify, identify)
 
 ### Phase 4: Power Features
 **Goal**: Users get differentiating detection capabilities — Swedish PII patterns, column-header context boosting, hide-all mode, and company/entity detection
@@ -74,7 +78,11 @@ Plans:
   2. Detection confidence is visibly higher for cells in columns whose headers indicate PII (e.g., "Customer", "Name", "Contact") compared to unheaded columns
   3. Company and legal entity names (AB, Ltd, GmbH, Inc, LLC suffixes) are detected as first-class entities, not just caught incidentally by NER
   4. User can run with `--text-mode hide-all` and every text cell is replaced with a stable token regardless of content
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Restorer module + restore CLI command (reconciliation engine, RestoreResult, manifest)
+- [ ] 03-02-PLAN.md — Diff command + CLI aliases (reconcile, deidentify, identify)
 
 ## Progress
 
@@ -85,5 +93,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete   | 2026-04-03 |
 | 2. Core Sanitize | 4/4 | Complete   | 2026-04-04 |
-| 3. Restore & Diff | 0/? | Not started | - |
+| 3. Restore & Diff | 0/2 | Not started | - |
 | 4. Power Features | 0/? | Not started | - |
