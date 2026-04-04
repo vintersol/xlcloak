@@ -192,3 +192,53 @@ def test_no_pii_returns_empty(detector: PiiDetector, registry: TokenRegistry) ->
 
     assert scan_results == [], f"Expected no scan results, got {scan_results}"
     assert replaced_text == cell.value, "replaced_text must equal cell.value when no PII found"
+
+
+# ── Swedish recognizer unit tests (no spaCy required) ──────────────────────
+# These tests instantiate PatternRecognizer subclasses directly and call
+# analyze() on the recognizer itself, not on the full AnalyzerEngine.
+# This keeps the tests fast (no spaCy model load).
+
+VALID_PERSONNUMMER_10 = "8112189876"          # valid 10-digit, no separator
+VALID_PERSONNUMMER_10_HYPHEN = "811218-9876"  # valid 10-digit with hyphen
+VALID_PERSONNUMMER_12 = "198112189876"        # valid 12-digit (century prefix 19)
+INVALID_PERSONNUMMER = "123456-7890"          # format ok, Luhn fails
+FIXTURE_PERSONNUMMER = "199001151234"         # synthetic fixture — Luhn fails
+
+VALID_ORGNUMMER = "556036-0793"              # Volvo AB — valid Luhn-10
+INVALID_ORGNUMMER = "556677-8901"            # synthetic fixture — Luhn fails
+INVALID_ORGNUMMER_2 = "123456-7890"          # wrong checksum
+
+
+def _recognize(recognizer, text: str):
+    """Call a PatternRecognizer directly (no NLP engine needed)."""
+    results = recognizer.analyze(text, entities=[recognizer.supported_entities[0]])
+    return results
+
+
+def test_personnummer_detected():
+    from xlcloak.recognizers import SwePersonnummerRecognizer
+    r = SwePersonnummerRecognizer()
+    assert _recognize(r, VALID_PERSONNUMMER_10), "10-digit without hyphen not detected"
+    assert _recognize(r, VALID_PERSONNUMMER_10_HYPHEN), "10-digit with hyphen not detected"
+    assert _recognize(r, VALID_PERSONNUMMER_12), "12-digit not detected"
+
+
+def test_personnummer_checksum_rejects_invalid():
+    from xlcloak.recognizers import SwePersonnummerRecognizer
+    r = SwePersonnummerRecognizer()
+    assert not _recognize(r, INVALID_PERSONNUMMER), "Invalid checksum should not be detected"
+    assert not _recognize(r, FIXTURE_PERSONNUMMER), "Synthetic fixture should fail Luhn"
+
+
+def test_orgnummer_detected():
+    from xlcloak.recognizers import SweOrgNummerRecognizer
+    r = SweOrgNummerRecognizer()
+    assert _recognize(r, VALID_ORGNUMMER), "Valid org-nummer not detected"
+
+
+def test_orgnummer_checksum_rejects_invalid():
+    from xlcloak.recognizers import SweOrgNummerRecognizer
+    r = SweOrgNummerRecognizer()
+    assert not _recognize(r, INVALID_ORGNUMMER), "Synthetic fixture should fail Luhn"
+    assert not _recognize(r, INVALID_ORGNUMMER_2), "Wrong checksum should not be detected"
