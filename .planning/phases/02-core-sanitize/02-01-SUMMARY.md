@@ -121,6 +121,13 @@ This is a one-time post-install step. Pattern/regex detectors (email, phone, URL
 - TokenRegistry integration is wired and tested (same token returned for same original value)
 - The right-to-left replacement logic is tested by multi-entity test case
 
+## Self-Check: PASSED
+
+- FOUND: src/xlcloak/detector.py
+- FOUND: tests/test_detector.py
+- FOUND: .planning/phases/02-core-sanitize/02-01-SUMMARY.md
+- Commits verified: 8a12a15 (feat), dd51642 (test), d045bdd (docs)
+
 ---
 *Phase: 02-core-sanitize*
 *Completed: 2026-04-04*
