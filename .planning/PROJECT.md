@@ -25,9 +25,9 @@ Sensitive text in Excel files never reaches AI tools, and the round-trip back to
 - [x] Detection via NER recognizers (person names) — *Validated in Phase 2: Core Sanitize (spaCy en_core_web_lg)*
 - [x] Encrypted `.xlcloak` restore bundle (Fernet, password-derived key, PBKDF2HMAC-SHA256 at 600k iterations) — *Validated in Phase 2: Core Sanitize*
 - [x] Manifest file documenting coverage, transformations, and risk notes — *Validated in Phase 2: Core Sanitize*
-- [ ] User can restore a sanitized `.xlsx` from its bundle, with conflict-aware reconciliation
-- [ ] User can diff a sanitized file against its bundle to see what changed
-- [ ] User can reconcile a modified sanitized file against its bundle
+- [x] User can restore a sanitized `.xlsx` from its bundle, with conflict-aware reconciliation — *Validated in Phase 3: restore-diff*
+- [x] User can diff a sanitized file against its bundle to see what changed — *Validated in Phase 3: restore-diff*
+- [x] User can reconcile a modified sanitized file against its bundle — *Validated in Phase 3: restore-diff (reconcile alias)*
 - [ ] Token mode: sensitive text replaced with stable, shape-preserving tokens (names, orgs, emails, phones, SSNs)
 - [ ] Hide-all mode: every text cell replaced with a stable token
 - [ ] Same source value always maps to the same token across the entire workbook
@@ -38,7 +38,7 @@ Sensitive text in Excel files never reaches AI tools, and the round-trip back to
 - [ ] Company and legal entity names detected as first-class entities
 - [ ] Encrypted `.xlcloak` restore bundle (Fernet, password-derived key)
 - [ ] Manifest file documenting coverage, transformations, and risk notes
-- [ ] Restore performs conflict-aware reconciliation (unchanged cells restored, changed cells skipped, new cells untouched)
+- [x] Restore performs conflict-aware reconciliation (unchanged cells restored, changed cells skipped, new cells untouched) — *Validated in Phase 3: restore-diff*
 - [ ] Unsupported surfaces (formulas, comments, charts, etc.) logged as warnings in manifest
 - [ ] Published to PyPI, installable via `pip install xlcloak`
 - [ ] Python 3.10+, cross-platform (Windows, macOS, Linux)
