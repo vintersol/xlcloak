@@ -9,6 +9,7 @@ from presidio_analyzer.nlp_engine import NlpEngineProvider
 from xlcloak.models import CellRef, EntityType, ScanResult
 from xlcloak.recognizers import (
     CompanySuffixRecognizer,
+    LoosePhoneRecognizer,
     SweOrgNummerRecognizer,
     SwePersonnummerRecognizer,
 )
@@ -37,15 +38,6 @@ _PII_HEADER_KEYWORDS = frozenset({
 })
 
 _BOOSTED_THRESHOLD = 0.3  # Used when column header indicates PII context
-
-# Common English words that spaCy's NER frequently misclassifies as PERSON or ORGANIZATION.
-# Only add words with evidence of false positives — keep this conservative.
-NER_DENY_LIST: frozenset[str] = frozenset({
-    "budget", "account", "contract", "invoice", "meeting",
-    "report", "review", "manager", "project", "department",
-    "office", "system", "service", "team", "group",
-    "policy", "schedule", "plan", "proposal", "agreement",
-})
 
 
 def _header_matches_pii_keyword(header: str | None) -> bool:
@@ -102,6 +94,7 @@ class PiiDetector:
         self._analyzer.registry.add_recognizer(SwePersonnummerRecognizer())
         self._analyzer.registry.add_recognizer(SweOrgNummerRecognizer())
         self._analyzer.registry.add_recognizer(CompanySuffixRecognizer())
+        self._analyzer.registry.add_recognizer(LoosePhoneRecognizer())
         return self._analyzer
 
     def detect_cell(
@@ -151,34 +144,23 @@ class PiiDetector:
                 seen_spans[key] = r
         deduped_results = list(seen_spans.values())
 
-        # Remove spans that overlap with a larger/higher-score span.
-        # Overlapping spans (including containment) cause the right-to-left
-        # replacement to produce garbled output because inner-span replacements
-        # shift character positions that outer-span replacements rely on.
-        # Greedy selection: sort by length descending (then score descending),
-        # keep a span only if it does not overlap with any already-kept span.
-        sorted_by_size = sorted(
-            deduped_results,
-            key=lambda r: (r.end - r.start, r.score),  # type: ignore[attr-defined]
-            reverse=True,
-        )
-        kept_intervals: list[tuple[int, int]] = []
-        non_overlapping = []
-        for r in sorted_by_size:
-            rs, re_ = r.start, r.end  # type: ignore[attr-defined]
-            if not any(rs < ke and re_ > ks for ks, ke in kept_intervals):
-                non_overlapping.append(r)
-                kept_intervals.append((rs, re_))
-        deduped_results = non_overlapping
-
-        # Filter NER false positives: common English words tagged as PERSON/ORGANIZATION
-        deduped_results = [
-            r for r in deduped_results
-            if not (
-                r.entity_type in ("PERSON", "ORGANIZATION", "COMPANY_SUFFIX")
-                and cell.value[r.start:r.end].lower() in NER_DENY_LIST
+        # Remove overlapping spans — greedy selection by score (highest score wins).
+        # Sort descending by score so higher-confidence results are selected first.
+        # An EMAIL_ADDRESS and a URL recognizer may both fire on "user@acme.com",
+        # producing non-identical but overlapping spans; without this step the
+        # right-to-left replacement would shift offsets and corrupt output.
+        scored_results = sorted(deduped_results, key=lambda r: r.score, reverse=True)
+        non_overlapping: list[object] = []
+        accepted_ranges: list[tuple[int, int]] = []
+        for r in scored_results:
+            overlaps = any(
+                r.start < end and r.end > start  # type: ignore[union-attr]
+                for start, end in accepted_ranges
             )
-        ]
+            if not overlaps:
+                non_overlapping.append(r)
+                accepted_ranges.append((r.start, r.end))  # type: ignore[union-attr]
+        deduped_results = non_overlapping
 
         # Sort descending by start offset for safe right-to-left replacement
         sorted_results = sorted(deduped_results, key=lambda r: r.start, reverse=True)

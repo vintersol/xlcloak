@@ -124,6 +124,55 @@ class SwePersonnummerRecognizer(PatternRecognizer):
         return True
 
 
+class LoosePhoneRecognizer(PatternRecognizer):
+    """Detect phone-like strings that the strict ``phonenumbers`` library rejects.
+
+    Presidio's built-in PHONE_NUMBER recognizer validates against the
+    ``phonenumbers`` library, which rejects numbers that do not conform to
+    real-world numbering plans (e.g. ``+1-555-0101`` has only 7 NANP digits
+    instead of the required 10). This recognizer uses a lightweight regex to
+    catch common formats that would otherwise be missed.
+
+    Patterns covered:
+    - International prefix style: ``+1-555-0101``, ``+46-70-123-4567``
+    - Captures optional country code (1-3 digits) with digit-separator groups
+
+    Score is 0.4 — below Presidio's validated PHONE_NUMBER (0.75+) so that a
+    ``phonenumbers``-confirmed result always outranks this one when both fire.
+    The overlap filter in ``detect_cell`` keeps the higher-score result.
+
+    Maps to ``PHONE_NUMBER`` so that ``PRESIDIO_TO_ENTITY_TYPE`` resolves to
+    ``EntityType.PHONE`` without any additional wiring.
+    """
+
+    # Matches: optional +countrycode separator, then 2-4 groups of 2-4 digits
+    # separated by hyphens or spaces. Requires at least 7 total digits.
+    _PATTERNS = [
+        Pattern(
+            "loose_phone_intl",
+            r"(?<!\d)(?:\+\d{1,3}[-\s])(?:\d{2,4}[-\s]){1,3}\d{2,4}(?!\d)",
+            0.4,
+        ),
+        Pattern(
+            "loose_phone_bare",
+            r"(?<!\d)\d{3}[-\s]\d{3}[-\s]\d{4}(?!\d)",
+            0.4,
+        ),
+    ]
+
+    def __init__(self) -> None:
+        super().__init__(
+            supported_entity="PHONE_NUMBER",
+            patterns=self._PATTERNS,
+            supported_language="en",
+        )
+
+    def validate_result(self, pattern_text: str) -> bool | None:  # type: ignore[override]
+        """Accept if there are at least 7 digit characters in the match."""
+        digits = re.sub(r"[^0-9]", "", pattern_text)
+        return len(digits) >= 7
+
+
 class SweOrgNummerRecognizer(PatternRecognizer):
     """Detect Swedish org-nummer (corporate identity numbers).
 

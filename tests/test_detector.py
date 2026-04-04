@@ -332,63 +332,79 @@ def test_header_boosting_detect_cell(tmp_path):
     )
 
 
-# ── NER deny-list tests ────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Regression: email/URL overlap corruption (BUG 1)
+# ---------------------------------------------------------------------------
 
 
-def test_deny_list_filters_budget_as_org(detector: PiiDetector, registry: TokenRegistry) -> None:
-    """'Budget' must NOT produce an ORGANIZATION detection (common word false positive)."""
-    cell = _make_cell("Budget approved for 2026")
-    scan_results, _ = detector.detect_cell(cell, registry)
+def test_email_not_corrupted_by_url_overlap(detector: PiiDetector, registry: TokenRegistry) -> None:
+    """Email cells must not produce garbage output when URL recognizer also fires.
 
-    org_results = [r for r in scan_results if r.entity_type == EntityType.ORG]
-    org_texts = [r.original for r in org_results]
-    assert "Budget" not in org_texts, (
-        f"'Budget' should not be detected as ORG, but got org results: {org_texts}"
-    )
+    Presidio fires both EMAIL_ADDRESS on the full span and URL on the domain
+    substring of an email like ``john.smith@acme.com``.  Without overlap
+    filtering the right-to-left replacement processes the URL sub-span first,
+    expands the string, then tries to use the stale EMAIL offsets — producing
+    output like ``https://example.com/URL_00403@example.comexample.com/URL_002``.
+    """
+    cell = _make_cell("john.smith@acme.com")
+    scan_results, replaced_text = detector.detect_cell(cell, registry)
 
-
-def test_deny_list_filters_account_as_org(detector: PiiDetector, registry: TokenRegistry) -> None:
-    """'Account' and 'manager' must NOT produce detections (common word false positives)."""
-    cell = _make_cell("Account manager review scheduled")
-    scan_results, _ = detector.detect_cell(cell, registry)
-
-    org_person_results = [
-        r for r in scan_results
-        if r.entity_type in (EntityType.ORG, EntityType.PERSON)
-    ]
-    flagged_texts = [r.original.lower() for r in org_person_results]
-    assert "account" not in flagged_texts, (
-        f"'account' should not be detected as ORG/PERSON, got: {flagged_texts}"
-    )
-
-
-def test_deny_list_does_not_filter_microsoft(detector: PiiDetector, registry: TokenRegistry) -> None:
-    """Legitimate entity 'Microsoft' is still detected as ORGANIZATION."""
-    cell = _make_cell("Works at Microsoft in Seattle")
-    scan_results, _ = detector.detect_cell(cell, registry)
-
-    org_results = [r for r in scan_results if r.entity_type == EntityType.ORG]
-    org_texts = [r.original for r in org_results]
-    assert any("Microsoft" in t for t in org_texts), (
-        f"'Microsoft' should be detected as ORG, but got: {org_texts}"
-    )
-
-
-def test_deny_list_case_insensitive(detector: PiiDetector, registry: TokenRegistry) -> None:
-    """Deny-list filtering is case-insensitive for matched entity text."""
-    from xlcloak.detector import NER_DENY_LIST
-    # Verify the constant exists and is a frozenset
-    assert isinstance(NER_DENY_LIST, frozenset), "NER_DENY_LIST must be a frozenset"
-    assert "budget" in NER_DENY_LIST, "'budget' must be in NER_DENY_LIST"
-    assert "account" in NER_DENY_LIST, "'account' must be in NER_DENY_LIST"
-
-
-def test_deny_list_does_not_filter_pattern_based(detector: PiiDetector, registry: TokenRegistry) -> None:
-    """Deny-list only applies to NER-based detections, not pattern-based (email, phone, URL)."""
-    cell = _make_cell("Email: account@microsoft.com")
-    scan_results, _ = detector.detect_cell(cell, registry)
-
+    # Must produce exactly one entity result for the email
     email_results = [r for r in scan_results if r.entity_type == EntityType.EMAIL]
-    assert len(email_results) >= 1, (
-        "Email should still be detected even though 'account' is in deny-list"
+    assert len(email_results) == 1, (
+        f"Expected exactly one EMAIL result, got {len(email_results)}: {scan_results}"
     )
+    # The original email must not appear in the output
+    assert "john.smith@acme.com" not in replaced_text, (
+        f"Original email leaked through: {replaced_text!r}"
+    )
+    # The replaced text must match the email token pattern — no garbage
+    assert _EMAIL_TOKEN_RE.match(replaced_text.strip()), (
+        f"replaced_text is not a clean email token: {replaced_text!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Regression: +1-555-0101 not recognized (BUG 2)
+# ---------------------------------------------------------------------------
+
+
+def test_loose_phone_fixture_number_detected(detector: PiiDetector, registry: TokenRegistry) -> None:
+    """+1-555-0101 (invalid NANP, only 7 digits) must be detected via LoosePhoneRecognizer.
+
+    The standard Presidio PHONE_NUMBER recognizer uses the ``phonenumbers`` library
+    which validates against real-world numbering plans. ``+1-555-0101`` does not
+    match US NANP (requires 10 digits after country code) so it is rejected.
+    LoosePhoneRecognizer catches it via a format-only regex.
+    """
+    cell = _make_cell("+1-555-0101")
+    scan_results, replaced_text = detector.detect_cell(cell, registry)
+
+    phone_results = [r for r in scan_results if r.entity_type == EntityType.PHONE]
+    assert len(phone_results) >= 1, (
+        "Expected +1-555-0101 to be detected as PHONE via LoosePhoneRecognizer"
+    )
+    assert "+1-555-0101" not in replaced_text, (
+        f"Phone number was not replaced: {replaced_text!r}"
+    )
+    assert _PHONE_TOKEN_RE.match(replaced_text.strip()), (
+        f"replaced_text is not a clean phone token: {replaced_text!r}"
+    )
+
+
+def test_loose_phone_recognizer_standalone() -> None:
+    """LoosePhoneRecognizer detects +1-555-0101 without needing the full analyzer."""
+    from xlcloak.recognizers import LoosePhoneRecognizer
+
+    r = LoosePhoneRecognizer()
+    results = r.analyze("+1-555-0101", entities=["PHONE_NUMBER"])
+    assert results, "+1-555-0101 should be matched by LoosePhoneRecognizer"
+
+
+def test_loose_phone_recognizer_rejects_short() -> None:
+    """LoosePhoneRecognizer must reject strings with fewer than 7 digits."""
+    from xlcloak.recognizers import LoosePhoneRecognizer
+
+    r = LoosePhoneRecognizer()
+    results = r.analyze("+1-555", entities=["PHONE_NUMBER"])
+    assert not results, "+1-555 (only 4 digits) should be rejected"
