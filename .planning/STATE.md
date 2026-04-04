@@ -120,9 +120,10 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260404-ixo | Update README.md to reflect phases 1-3 complete | 2026-04-04 | 65d44b5 | [260404-ixo-update-readme-md-to-reflect-phases-1-3-c](.planning/quick/260404-ixo-update-readme-md-to-reflect-phases-1-3-c/) |
+| 260404-uuo | Fix restorer substring replacement and NER false positives | 2026-04-04 | a7c6e3b | [260404-uuo-fix-restorer-substring-replacement-and-n](.planning/quick/260404-uuo-fix-restorer-substring-replacement-and-n/) |
 
 ## Session Continuity
 
-Last session: 2026-04-04T16:00:29.635Z
-Stopped at: Completed 04-power-features-04-03-PLAN.md
+Last session: 2026-04-04T00:00:00Z
+Stopped at: Completed quick task 260404-uuo
 Resume file: None

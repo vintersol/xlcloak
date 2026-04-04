@@ -354,3 +354,125 @@ def test_restorer_overwrite_protection(tmp_path: Path) -> None:
 
     with pytest.raises(click.UsageError, match="--force"):
         Restorer().run(sanitized, bundle)  # second run without force
+
+
+# ---------------------------------------------------------------------------
+# Tests: substring replacement (mixed-content cells)
+# ---------------------------------------------------------------------------
+
+
+def test_restorer_substring_mixed_content_cell(tmp_path: Path) -> None:
+    """Cells with tokens embedded in surrounding text are fully restored."""
+    from xlcloak.restorer import Restorer
+
+    sanitized = tmp_path / "data_sanitized.xlsx"
+    _write_xlsx(sanitized, [
+        (1, 1, "Contact PERSON_001 at EMAIL_002@example.com for details"),
+    ])
+
+    bundle = tmp_path / "data.xlcloak"
+    _write_bundle(bundle, FORWARD_MAP, REVERSE_MAP)
+
+    result = Restorer().run(sanitized, bundle, force=True)
+
+    # Cell had 2 tokens — it is a single cell, so restored_count = 1 (cell count)
+    assert result.restored_count == 1
+
+    # Load the restored file and verify the cell value
+    import openpyxl
+    wb = openpyxl.load_workbook(str(result.restored_path))
+    ws = wb.active
+    cell_value = ws.cell(row=1, column=1).value
+    assert cell_value == "Contact John Smith at jane@example.com for details", (
+        f"Expected full restoration, got: {cell_value!r}"
+    )
+
+
+def test_restorer_substring_single_token(tmp_path: Path) -> None:
+    """Cell with only a token is restored to the original (existing behavior preserved)."""
+    from xlcloak.restorer import Restorer
+
+    sanitized = tmp_path / "data_sanitized.xlsx"
+    _write_xlsx(sanitized, [(1, 1, "PERSON_001")])
+
+    bundle = tmp_path / "data.xlcloak"
+    forward_map = {"John Smith": "PERSON_001"}
+    reverse_map = {"PERSON_001": "John Smith"}
+    _write_bundle(bundle, forward_map, reverse_map)
+
+    result = Restorer().run(sanitized, bundle, force=True)
+    assert result.restored_count == 1
+
+    import openpyxl
+    wb = openpyxl.load_workbook(str(result.restored_path))
+    ws = wb.active
+    assert ws.cell(row=1, column=1).value == "John Smith"
+
+
+def test_restorer_substring_no_token_unchanged(tmp_path: Path) -> None:
+    """Cell with no token text is left unchanged."""
+    from xlcloak.restorer import Restorer
+
+    sanitized = tmp_path / "data_sanitized.xlsx"
+    _write_xlsx(sanitized, [
+        (1, 1, "No PII here at all"),
+    ])
+
+    bundle = tmp_path / "data.xlcloak"
+    forward_map = {"John Smith": "PERSON_001"}
+    reverse_map = {"PERSON_001": "John Smith"}
+    _write_bundle(bundle, forward_map, reverse_map)
+
+    result = Restorer().run(sanitized, bundle, force=True)
+    assert result.restored_count == 0
+
+    import openpyxl
+    wb = openpyxl.load_workbook(str(result.restored_path))
+    ws = wb.active
+    assert ws.cell(row=1, column=1).value == "No PII here at all"
+
+
+def test_restorer_substring_prefix_collision_resolved(tmp_path: Path) -> None:
+    """Longer tokens take precedence over shorter prefix tokens."""
+    from xlcloak.restorer import Restorer
+
+    import openpyxl
+
+    # PERSON_001 is a prefix of PERSON_0019 — longer must win
+    forward_map = {"John Smith": "PERSON_001", "Jane Doe": "PERSON_0019"}
+    reverse_map = {v: k for k, v in forward_map.items()}
+
+    sanitized = tmp_path / "data_sanitized.xlsx"
+    _write_xlsx(sanitized, [(1, 1, "PERSON_0019")])
+
+    bundle = tmp_path / "data.xlcloak"
+    _write_bundle(bundle, forward_map, reverse_map)
+
+    result = Restorer().run(sanitized, bundle, force=True)
+
+    wb = openpyxl.load_workbook(str(result.restored_path))
+    ws = wb.active
+    cell_value = ws.cell(row=1, column=1).value
+    assert cell_value == "Jane Doe", (
+        f"Expected 'Jane Doe' (longer token wins), got: {cell_value!r}"
+    )
+
+
+def test_restorer_restored_count_counts_cells_not_tokens(tmp_path: Path) -> None:
+    """restored_count is number of cells with substitutions, not total substitutions."""
+    from xlcloak.restorer import Restorer
+
+    sanitized = tmp_path / "data_sanitized.xlsx"
+    _write_xlsx(sanitized, [
+        (1, 1, "PERSON_001 and BOB_003"),  # single cell, two tokens
+    ])
+
+    forward_map_local = {"John Smith": "PERSON_001", "Bob Jones": "BOB_003"}
+    reverse_map_local = {v: k for k, v in forward_map_local.items()}
+
+    bundle = tmp_path / "data.xlcloak"
+    _write_bundle(bundle, forward_map_local, reverse_map_local)
+
+    result = Restorer().run(sanitized, bundle, force=True)
+    # One cell was patched (even though two tokens were in it)
+    assert result.restored_count == 1
