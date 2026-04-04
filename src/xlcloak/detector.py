@@ -7,6 +7,7 @@ from presidio_analyzer import AnalyzerEngine
 from presidio_analyzer.nlp_engine import NlpEngineProvider
 
 from xlcloak.models import CellRef, EntityType, ScanResult
+from xlcloak.recognizers import SweOrgNummerRecognizer, SwePersonnummerRecognizer
 from xlcloak.token_engine import TokenRegistry
 
 # Mapping from Presidio entity names to xlcloak EntityType values
@@ -16,6 +17,8 @@ PRESIDIO_TO_ENTITY_TYPE: dict[str, EntityType] = {
     "PERSON": EntityType.PERSON,
     "URL": EntityType.URL,
     "ORGANIZATION": EntityType.ORG,
+    "PERSONNUMMER_SE": EntityType.SSN_SE,    # SwePersonnummerRecognizer
+    "ORGNUM_SE": EntityType.ORGNUM_SE,       # SweOrgNummerRecognizer
 }
 
 # Entity names to pass to AnalyzerEngine.analyze() — avoids unwanted types
@@ -66,6 +69,8 @@ class PiiDetector:
             supported_languages=["en"],
             default_score_threshold=self._threshold,
         )
+        self._analyzer.registry.add_recognizer(SwePersonnummerRecognizer())
+        self._analyzer.registry.add_recognizer(SweOrgNummerRecognizer())
         return self._analyzer
 
     def detect_cell(

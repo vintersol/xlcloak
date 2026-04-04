@@ -242,3 +242,20 @@ def test_orgnummer_checksum_rejects_invalid():
     r = SweOrgNummerRecognizer()
     assert not _recognize(r, INVALID_ORGNUMMER), "Synthetic fixture should fail Luhn"
     assert not _recognize(r, INVALID_ORGNUMMER_2), "Wrong checksum should not be detected"
+
+
+def test_personnummer_detect_cell_no_keyerror(tmp_path):
+    """Full detect_cell() path with personnummer must not raise KeyError."""
+    # This test is slower (spaCy init) but verifies the dict wiring
+    from xlcloak.detector import PiiDetector
+    from xlcloak.models import CellRef
+    from xlcloak.token_engine import TokenRegistry
+
+    detector = PiiDetector()
+    registry = TokenRegistry()
+    cell = CellRef(sheet_name="Sheet1", row=2, col=1, value="Contact: 811218-9876")
+    results, replaced = detector.detect_cell(cell, registry)
+    # Must not raise KeyError; personnummer may or may not be detected depending
+    # on NLP context, but no exception means the dict wiring is correct
+    assert isinstance(results, list)
+    assert isinstance(replaced, str)
