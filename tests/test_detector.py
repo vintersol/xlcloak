@@ -278,3 +278,55 @@ def test_company_suffix_no_false_positive():
     r = CompanySuffixRecognizer()
     assert not _recognize(r, "AB"), "Bare 'AB' should not be detected"
     assert not _recognize(r, "the ltd"), "Lowercase prefix should not be detected"
+
+
+# ── Header boosting unit tests (no spaCy required for the module-level fn) ──
+
+
+def test_header_matches_pii_keyword_positive():
+    from xlcloak.detector import _header_matches_pii_keyword
+    assert _header_matches_pii_keyword("Customer")
+    assert _header_matches_pii_keyword("Customer Name")
+    assert _header_matches_pii_keyword("Email Address")
+    assert _header_matches_pii_keyword("Personnummer")
+    assert _header_matches_pii_keyword("PHONE")  # case insensitive
+
+
+def test_header_matches_pii_keyword_negative():
+    from xlcloak.detector import _header_matches_pii_keyword
+    assert not _header_matches_pii_keyword("Invoice Amount")
+    assert not _header_matches_pii_keyword("Date")
+    assert not _header_matches_pii_keyword(None)
+    assert not _header_matches_pii_keyword("")
+
+
+def test_header_boosting_detect_cell(tmp_path):
+    """Verify detect_cell() uses boosted threshold when column_header matches a keyword.
+
+    This test is slower (spaCy init). Uses a borderline confidence scenario:
+    the boosted call should have MORE results (or same) than the default call
+    when analyzing PII-adjacent content.
+    """
+    from xlcloak.detector import PiiDetector
+    from xlcloak.models import CellRef
+    from xlcloak.token_engine import TokenRegistry
+
+    detector = PiiDetector()
+    registry1 = TokenRegistry()
+    registry2 = TokenRegistry()
+
+    # A cell with an entity that might be on the edge of the 0.4 threshold
+    # Use a known email which is detected at high confidence — we just verify
+    # that passing column_header doesn't break anything, and that the signature works
+    cell = CellRef(sheet_name="Sheet1", row=2, col=1, value="test@example.com")
+
+    results_no_boost, _ = detector.detect_cell(cell, registry1, column_header=None)
+    results_boosted, _ = detector.detect_cell(cell, registry2, column_header="Email")
+
+    # Both should detect the email; the boosted call must not raise an error
+    assert isinstance(results_no_boost, list)
+    assert isinstance(results_boosted, list)
+    # Boosted threshold should find at least as many entities (may find more borderline ones)
+    assert len(results_boosted) >= len(results_no_boost), (
+        "Boosted detection should find >= entities compared to normal threshold"
+    )

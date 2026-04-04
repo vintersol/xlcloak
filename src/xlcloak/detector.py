@@ -30,6 +30,22 @@ PRESIDIO_TO_ENTITY_TYPE: dict[str, EntityType] = {
 # like credit cards, IBANs, crypto wallets, etc.
 PHASE2_ENTITIES: list[str] = list(PRESIDIO_TO_ENTITY_TYPE.keys())
 
+# PII-indicating column header keywords for context boosting (D-12)
+_PII_HEADER_KEYWORDS = frozenset({
+    "name", "customer", "contact", "email", "phone",
+    "company", "ssn", "personid", "personnummer", "organisation",
+})
+
+_BOOSTED_THRESHOLD = 0.3  # Used when column header indicates PII context
+
+
+def _header_matches_pii_keyword(header: str | None) -> bool:
+    """Return True if the column header contains a PII-indicating keyword."""
+    if not header:
+        return False
+    lower = header.lower()
+    return any(kw in lower for kw in _PII_HEADER_KEYWORDS)
+
 
 class PiiDetector:
     """Wraps Presidio AnalyzerEngine with lazy initialization and entity mapping.
@@ -83,6 +99,7 @@ class PiiDetector:
         self,
         cell: CellRef,
         registry: TokenRegistry,
+        column_header: str | None = None,
     ) -> tuple[list[ScanResult], str]:
         """Detect PII in a single cell and return results plus replaced text.
 
@@ -92,6 +109,9 @@ class PiiDetector:
         Args:
             cell: The cell to scan. ``cell.value`` must not be ``None``.
             registry: Token registry used to look up or mint stable tokens.
+            column_header: Optional column header text. If it contains a PII
+                keyword, the score threshold is lowered to 0.3 to accept
+                lower-confidence matches.
 
         Returns:
             A two-tuple ``(scan_results, replaced_text)`` where:
@@ -106,11 +126,12 @@ class PiiDetector:
         assert cell.value is not None, "cell.value must not be None"
 
         analyzer = self._get_analyzer()
+        threshold = _BOOSTED_THRESHOLD if _header_matches_pii_keyword(column_header) else self._threshold
         raw_results = analyzer.analyze(
             text=cell.value,
             language="en",
             entities=PHASE2_ENTITIES,
-            score_threshold=self._threshold,
+            score_threshold=threshold,
         )
 
         # Deduplicate by span — keep highest-score result when two recognizers fire on same span
