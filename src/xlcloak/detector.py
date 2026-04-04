@@ -38,6 +38,15 @@ _PII_HEADER_KEYWORDS = frozenset({
 
 _BOOSTED_THRESHOLD = 0.3  # Used when column header indicates PII context
 
+# Common English words that spaCy's NER frequently misclassifies as PERSON or ORGANIZATION.
+# Only add words with evidence of false positives — keep this conservative.
+NER_DENY_LIST: frozenset[str] = frozenset({
+    "budget", "account", "contract", "invoice", "meeting",
+    "report", "review", "manager", "project", "department",
+    "office", "system", "service", "team", "group",
+    "policy", "schedule", "plan", "proposal", "agreement",
+})
+
 
 def _header_matches_pii_keyword(header: str | None) -> bool:
     """Return True if the column header contains a PII-indicating keyword."""
@@ -141,6 +150,15 @@ class PiiDetector:
             if key not in seen_spans or r.score > seen_spans[key].score:  # type: ignore[union-attr]
                 seen_spans[key] = r
         deduped_results = list(seen_spans.values())
+
+        # Filter NER false positives: common English words tagged as PERSON/ORGANIZATION
+        deduped_results = [
+            r for r in deduped_results
+            if not (
+                r.entity_type in ("PERSON", "ORGANIZATION", "COMPANY_SUFFIX")
+                and cell.value[r.start:r.end].lower() in NER_DENY_LIST
+            )
+        ]
 
         # Sort descending by start offset for safe right-to-left replacement
         sorted_results = sorted(deduped_results, key=lambda r: r.start, reverse=True)

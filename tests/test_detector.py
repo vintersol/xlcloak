@@ -330,3 +330,65 @@ def test_header_boosting_detect_cell(tmp_path):
     assert len(results_boosted) >= len(results_no_boost), (
         "Boosted detection should find >= entities compared to normal threshold"
     )
+
+
+# ── NER deny-list tests ────────────────────────────────────────────────────
+
+
+def test_deny_list_filters_budget_as_org(detector: PiiDetector, registry: TokenRegistry) -> None:
+    """'Budget' must NOT produce an ORGANIZATION detection (common word false positive)."""
+    cell = _make_cell("Budget approved for 2026")
+    scan_results, _ = detector.detect_cell(cell, registry)
+
+    org_results = [r for r in scan_results if r.entity_type == EntityType.ORG]
+    org_texts = [r.original for r in org_results]
+    assert "Budget" not in org_texts, (
+        f"'Budget' should not be detected as ORG, but got org results: {org_texts}"
+    )
+
+
+def test_deny_list_filters_account_as_org(detector: PiiDetector, registry: TokenRegistry) -> None:
+    """'Account' and 'manager' must NOT produce detections (common word false positives)."""
+    cell = _make_cell("Account manager review scheduled")
+    scan_results, _ = detector.detect_cell(cell, registry)
+
+    org_person_results = [
+        r for r in scan_results
+        if r.entity_type in (EntityType.ORG, EntityType.PERSON)
+    ]
+    flagged_texts = [r.original.lower() for r in org_person_results]
+    assert "account" not in flagged_texts, (
+        f"'account' should not be detected as ORG/PERSON, got: {flagged_texts}"
+    )
+
+
+def test_deny_list_does_not_filter_microsoft(detector: PiiDetector, registry: TokenRegistry) -> None:
+    """Legitimate entity 'Microsoft' is still detected as ORGANIZATION."""
+    cell = _make_cell("Works at Microsoft in Seattle")
+    scan_results, _ = detector.detect_cell(cell, registry)
+
+    org_results = [r for r in scan_results if r.entity_type == EntityType.ORG]
+    org_texts = [r.original for r in org_results]
+    assert any("Microsoft" in t for t in org_texts), (
+        f"'Microsoft' should be detected as ORG, but got: {org_texts}"
+    )
+
+
+def test_deny_list_case_insensitive(detector: PiiDetector, registry: TokenRegistry) -> None:
+    """Deny-list filtering is case-insensitive for matched entity text."""
+    from xlcloak.detector import NER_DENY_LIST
+    # Verify the constant exists and is a frozenset
+    assert isinstance(NER_DENY_LIST, frozenset), "NER_DENY_LIST must be a frozenset"
+    assert "budget" in NER_DENY_LIST, "'budget' must be in NER_DENY_LIST"
+    assert "account" in NER_DENY_LIST, "'account' must be in NER_DENY_LIST"
+
+
+def test_deny_list_does_not_filter_pattern_based(detector: PiiDetector, registry: TokenRegistry) -> None:
+    """Deny-list only applies to NER-based detections, not pattern-based (email, phone, URL)."""
+    cell = _make_cell("Email: account@microsoft.com")
+    scan_results, _ = detector.detect_cell(cell, registry)
+
+    email_results = [r for r in scan_results if r.entity_type == EntityType.EMAIL]
+    assert len(email_results) >= 1, (
+        "Email should still be detected even though 'account' is in deny-list"
+    )
