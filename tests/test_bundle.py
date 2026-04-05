@@ -80,6 +80,7 @@ def test_bundle_metadata(tmp_path):
     payload = BundleReader().read(bundle)
 
     assert "version" in payload
+    assert "bundle_id" in payload
     assert "original_filename" in payload
     assert "created_at" in payload
     assert "sheets_processed" in payload
@@ -87,6 +88,7 @@ def test_bundle_metadata(tmp_path):
     assert "password_mode" in payload
 
     assert payload["version"] == "0.1.0"
+    assert isinstance(payload["bundle_id"], str) and payload["bundle_id"]
     assert payload["original_filename"] == "test.xlsx"
     assert payload["sheets_processed"] == ["Sheet1"]
     assert payload["token_count"] == 2

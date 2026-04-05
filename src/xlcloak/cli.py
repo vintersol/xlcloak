@@ -14,6 +14,24 @@ import xlcloak
 from xlcloak.bundle import DEFAULT_PASSWORD
 
 
+def _resolve_password(password: str | None, use_default_password: bool) -> str:
+    """Resolve password input while keeping insecure default opt-in explicit."""
+    if password and use_default_password:
+        raise click.UsageError("Use either --password or --use-default-password, not both.")
+    if password:
+        return password
+    if use_default_password:
+        click.echo(
+            "Warning: Using insecure default password by explicit request.",
+            err=True,
+        )
+        return DEFAULT_PASSWORD
+    raise click.UsageError(
+        "Password is required. Use --password (or XLCLOAK_PASSWORD), "
+        "or pass --use-default-password to opt into insecure legacy mode."
+    )
+
+
 @click.group(context_settings={"auto_envvar_prefix": "XLCLOAK"})
 @click.version_option(version=xlcloak.__version__, prog_name="xlcloak")
 def main() -> None:
@@ -24,9 +42,15 @@ def main() -> None:
 @click.argument("file", type=click.Path(exists=True, path_type=Path))
 @click.option(
     "--password",
-    default=DEFAULT_PASSWORD,
-    show_default=True,
+    default=None,
+    show_default=False,
     help="Encryption password for the restore bundle",
+)
+@click.option(
+    "--use-default-password",
+    is_flag=True,
+    default=False,
+    help="Use the built-in default password (unsafe; legacy compatibility only)",
 )
 @click.option(
     "--output",
@@ -67,6 +91,12 @@ def main() -> None:
     help="Replace every text cell with a stable token regardless of content",
 )
 @click.option(
+    "--allow-unsupported-surfaces",
+    is_flag=True,
+    default=False,
+    help="Proceed even when formulas/comments/charts are detected (unsafe)",
+)
+@click.option(
     "--verbose",
     is_flag=True,
     default=False,
@@ -74,13 +104,15 @@ def main() -> None:
 )
 def sanitize(
     file: Path,
-    password: str,
+    password: str | None,
+    use_default_password: bool,
     output_path: Path | None,
     bundle_path: Path | None,
     dry_run: bool,
     text_mode: bool,
     force: bool,
     hide_all: bool,
+    allow_unsupported_surfaces: bool,
     verbose: bool,
 ) -> None:
     """Sanitize FILE, producing a sanitized xlsx, encrypted bundle, and manifest."""
@@ -149,16 +181,19 @@ def sanitize(
         click.echo(f"Text extracted: {text_out} ({len(text_cells)} cells)")
         return
 
-    if password == DEFAULT_PASSWORD:
-        click.echo(
-            "Warning: Using default password. Use --password for real encryption.",
-            err=True,
-        )
+    resolved_password = _resolve_password(password, use_default_password)
 
     try:
         detector = PiiDetector()
-        sanitizer = Sanitizer(detector, password)
-        result = sanitizer.run(file, output_path, force, bundle_path, hide_all=hide_all)
+        sanitizer = Sanitizer(detector, resolved_password)
+        result = sanitizer.run(
+            file,
+            output_path,
+            force,
+            bundle_path,
+            hide_all=hide_all,
+            allow_unsupported_surfaces=allow_unsupported_surfaces,
+        )
     except click.UsageError:
         raise
     except Exception as exc:
@@ -188,9 +223,15 @@ def sanitize(
 )
 @click.option(
     "--password",
-    default=DEFAULT_PASSWORD,
-    show_default=True,
+    default=None,
+    show_default=False,
     help="Decryption password for the bundle",
+)
+@click.option(
+    "--use-default-password",
+    is_flag=True,
+    default=False,
+    help="Use the built-in default password (unsafe; legacy compatibility only)",
 )
 @click.option(
     "--output",
@@ -211,19 +252,30 @@ def sanitize(
     default=False,
     help="Show detailed output including skipped token list",
 )
+@click.option(
+    "--allow-unbound-restore",
+    is_flag=True,
+    default=False,
+    help="Allow restoring from legacy/unbound bundles (unsafe)",
+)
 def restore(
     file: Path,
     bundle_path: Path,
-    password: str,
+    password: str | None,
+    use_default_password: bool,
     output_path: Path | None,
     force: bool,
     verbose: bool,
+    allow_unbound_restore: bool,
 ) -> None:
     """Restore FILE from a sanitized xlsx using the encrypted BUNDLE."""
     from xlcloak.restorer import Restorer
 
+    resolved_password = _resolve_password(password, use_default_password)
     try:
-        result = Restorer(password).run(file, bundle_path, output_path, force)
+        result = Restorer(resolved_password).run(
+            file, bundle_path, output_path, force, allow_unbound_restore=allow_unbound_restore
+        )
     except ValueError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)

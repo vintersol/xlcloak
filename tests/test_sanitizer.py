@@ -24,6 +24,7 @@ pytestmark = pytest.mark.skipif(
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 SIMPLE_FIXTURE = FIXTURES_DIR / "simple.xlsx"
+HARD_FIXTURE = FIXTURES_DIR / "hard.xlsx"
 
 
 @pytest.fixture(scope="module")
@@ -215,3 +216,25 @@ def test_sanitize_medium_fixture_hide_all_integration(tmp_path):
     assert result.bundle_path.exists(), "Bundle must be written"
     assert result.cells_sanitized > 0, "hide-all must have replaced at least one cell"
     assert result.token_count > 0, "At least one unique token must be registered"
+
+
+def test_sanitize_blocks_unsupported_surfaces_by_default(tmp_path):
+    """Workbook with formulas/comments/charts is rejected unless override is set."""
+    detector = PiiDetector()
+    sanitizer = Sanitizer(detector)
+    input_path = tmp_path / "hard.xlsx"
+    shutil.copy2(HARD_FIXTURE, input_path)
+
+    with pytest.raises(click.UsageError, match="Unsupported surfaces detected"):
+        sanitizer.run(input_path)
+
+
+def test_sanitize_allows_unsupported_surfaces_with_override(tmp_path):
+    """Unsafe override allows sanitize on workbook with unsupported surfaces."""
+    detector = PiiDetector()
+    sanitizer = Sanitizer(detector)
+    input_path = tmp_path / "hard.xlsx"
+    shutil.copy2(HARD_FIXTURE, input_path)
+
+    result = sanitizer.run(input_path, allow_unsupported_surfaces=True)
+    assert result.sanitized_path.exists()

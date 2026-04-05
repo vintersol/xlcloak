@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -64,7 +65,8 @@ class BundleWriter:
         original_filename: str,
         sheets_processed: list[str],
         token_count: int,
-    ) -> None:
+        bundle_id: str | None = None,
+    ) -> str:
         """Encrypt and write the bundle to *path*.
 
         Args:
@@ -74,9 +76,13 @@ class BundleWriter:
             original_filename: Basename of the source .xlsx file.
             sheets_processed: List of worksheet names that were sanitized.
             token_count: Total number of unique tokens created.
+            bundle_id: Optional bundle identity. If omitted, a random UUID4 is used.
         """
+        if bundle_id is None:
+            bundle_id = str(uuid.uuid4())
         payload: dict = {
             "version": xlcloak.__version__,
+            "bundle_id": bundle_id,
             "original_filename": original_filename,
             "created_at": datetime.now(tz=timezone.utc).isoformat(),
             "sheets_processed": sheets_processed,
@@ -90,6 +96,7 @@ class BundleWriter:
         key = _derive_key(self._password, salt)
         ciphertext = Fernet(key).encrypt(json.dumps(payload).encode())
         path.write_bytes(salt + ciphertext)
+        return bundle_id
 
 
 class BundleReader:

@@ -70,9 +70,11 @@ Replace PII with stable tokens and produce an encrypted restore bundle.
 
 | Option | Description |
 |--------|-------------|
-| `--password TEXT` | Encryption password for the bundle. If omitted a random key is used and a warning is printed — not suitable for sensitive data. |
+| `--password TEXT` | Encryption password for the bundle (required unless using insecure legacy mode). |
+| `--use-default-password` | Use built-in default password (`xlcloak`) for legacy workflows (unsafe). |
 | `--output PATH` | Output path for the sanitized file |
 | `--bundle PATH` | Explicit output path for the `.xlcloak` bundle |
+| `--allow-unsupported-surfaces` | Proceed when formulas/comments/charts are detected (unsafe). |
 | `--dry-run` | Preview detection without writing any files |
 | `--text-mode` | Extract all text cells to a `.txt` file instead of token replacement |
 | `--force` | Overwrite existing output files |
@@ -85,10 +87,12 @@ Decrypt the restore bundle and write a file with original values put back.
 | Option | Description |
 |--------|-------------|
 | `--bundle PATH` | Path to the `.xlcloak` restore bundle (required) |
-| `--password TEXT` | Decryption password |
+| `--password TEXT` | Decryption password (required unless using insecure legacy mode) |
+| `--use-default-password` | Use built-in default password (`xlcloak`) for legacy workflows (unsafe). |
 | `--output PATH` | Output path for the restored file |
 | `--force` | Overwrite existing output |
 | `--verbose` | Show list of AI-modified tokens that were skipped |
+| `--allow-unbound-restore` | Allow restore when bundle/workbook binding metadata is missing (unsafe). |
 
 ### `xlcloak diff <file>`
 

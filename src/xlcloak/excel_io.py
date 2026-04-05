@@ -12,6 +12,11 @@ from openpyxl.workbook import Workbook
 
 from xlcloak.models import CellRef, SurfaceWarning
 
+XLCLOAK_META_SHEET = "__xlcloak_meta__"
+XLCLOAK_META_KEY_CELL = "A1"
+XLCLOAK_META_VALUE_CELL = "B1"
+XLCLOAK_BUNDLE_ID_KEY = "bundle_id"
+
 
 class WorkbookReader:
     """Read a workbook, iterate text cells, and scan for unsupported surfaces."""
@@ -26,6 +31,8 @@ class WorkbookReader:
     def iter_text_cells(self, wb: Workbook) -> Iterator[CellRef]:
         """Yield CellRef for every string-valued cell across all sheets."""
         for ws in wb.worksheets:
+            if ws.title == XLCLOAK_META_SHEET:
+                continue
             for row in ws.iter_rows():
                 for cell in row:
                     if cell.data_type == "s" and cell.value is not None:
@@ -41,6 +48,8 @@ class WorkbookReader:
         warnings: list[SurfaceWarning] = []
 
         for ws in wb.worksheets:
+            if ws.title == XLCLOAK_META_SHEET:
+                continue
             # Per-cell scans
             for row in ws.iter_rows():
                 for cell in row:
@@ -168,3 +177,30 @@ class WorkbookWriter:
         self.prepare()
         self.patch_cells(patches)
         return self.output_path
+
+
+def write_bundle_id_marker(path: Path, bundle_id: str) -> None:
+    """Persist bundle_id in a very-hidden metadata sheet inside workbook at *path*."""
+    wb = openpyxl.load_workbook(str(path))
+    if XLCLOAK_META_SHEET in wb.sheetnames:
+        ws = wb[XLCLOAK_META_SHEET]
+    else:
+        ws = wb.create_sheet(XLCLOAK_META_SHEET)
+    ws.sheet_state = "veryHidden"
+    ws[XLCLOAK_META_KEY_CELL] = XLCLOAK_BUNDLE_ID_KEY
+    ws[XLCLOAK_META_VALUE_CELL] = bundle_id
+    wb.save(str(path))
+
+
+def read_bundle_id_marker(path: Path) -> str | None:
+    """Return embedded bundle_id from workbook at *path*, or None if missing."""
+    wb = openpyxl.load_workbook(str(path), data_only=False, read_only=True)
+    if XLCLOAK_META_SHEET not in wb.sheetnames:
+        return None
+    ws = wb[XLCLOAK_META_SHEET]
+    if ws[XLCLOAK_META_KEY_CELL].value != XLCLOAK_BUNDLE_ID_KEY:
+        return None
+    value = ws[XLCLOAK_META_VALUE_CELL].value
+    if value is None:
+        return None
+    return str(value)

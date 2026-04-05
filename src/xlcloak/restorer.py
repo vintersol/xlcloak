@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from xlcloak.bundle import DEFAULT_PASSWORD, BundleReader
-from xlcloak.excel_io import WorkbookReader, WorkbookWriter
+from xlcloak.excel_io import WorkbookReader, WorkbookWriter, read_bundle_id_marker
 from xlcloak.sanitizer import check_overwrite
 
 
@@ -101,6 +100,7 @@ class Restorer:
         bundle_path: Path,
         output_path: Path | None = None,
         force: bool = False,
+        allow_unbound_restore: bool = False,
     ) -> RestoreResult:
         """Run the restore pipeline on *sanitized_path* using *bundle_path*.
 
@@ -125,8 +125,24 @@ class Restorer:
         # Decrypt bundle — raises ValueError on wrong password
         payload = BundleReader(self._password).read(bundle_path)
         reverse_map: dict[str, str] = payload["reverse_map"]
+        bundle_id: str | None = payload.get("bundle_id")
         bundle_version: str = payload.get("version", "")
         password_mode: str = payload.get("password_mode", "")
+
+        marker_bundle_id = read_bundle_id_marker(sanitized_path)
+        if bundle_id:
+            if marker_bundle_id is None and not allow_unbound_restore:
+                raise ValueError(
+                    "Sanitized workbook is missing xlcloak bundle binding metadata. "
+                    "Use --allow-unbound-restore to bypass this check."
+                )
+            if marker_bundle_id is not None and marker_bundle_id != bundle_id:
+                raise ValueError("Bundle does not match the sanitized workbook (bundle_id mismatch)")
+        elif not allow_unbound_restore:
+            raise ValueError(
+                "Bundle is legacy/unbound and cannot be safely matched to workbook. "
+                "Use --allow-unbound-restore to proceed."
+            )
 
         # Derive output paths
         restored_path, manifest_path = derive_restore_paths(sanitized_path, output_path)
@@ -142,30 +158,12 @@ class Restorer:
         found_tokens: set[str] = set()
         cells_walked = 0
 
-        # Build a compiled regex from all token keys, sorted longest-first to
-        # avoid prefix collisions (e.g. PERSON_0019 before PERSON_001).
-        if reverse_map:
-            sorted_keys = sorted(reverse_map.keys(), key=len, reverse=True)
-            token_pattern: re.Pattern[str] | None = re.compile(
-                "|".join(re.escape(k) for k in sorted_keys)
-            )
-        else:
-            token_pattern = None
-
         for cell in reader.iter_text_cells(wb):
             cells_walked += 1
-            if token_pattern is None:
-                continue
-            cell_found: set[str] = set()
-
-            def _replace(m: re.Match, _found: set[str] = cell_found) -> str:
-                _found.add(m.group(0))
-                return reverse_map[m.group(0)]
-
-            new_value = token_pattern.sub(_replace, cell.value)
-            if cell_found:
-                patches.append((cell.sheet_name, cell.row, cell.col, new_value))
-                found_tokens.update(cell_found)
+            if cell.value in reverse_map:
+                original = reverse_map[cell.value]
+                patches.append((cell.sheet_name, cell.row, cell.col, original))
+                found_tokens.add(cell.value)
 
         # Compute counts
         restored_count = len(patches)

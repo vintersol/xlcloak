@@ -11,7 +11,7 @@ import click
 import xlcloak
 from xlcloak.bundle import DEFAULT_PASSWORD, BundleWriter
 from xlcloak.detector import PiiDetector
-from xlcloak.excel_io import WorkbookReader, WorkbookWriter
+from xlcloak.excel_io import WorkbookReader, WorkbookWriter, write_bundle_id_marker
 from xlcloak.manifest import Manifest
 from xlcloak.models import EntityType
 from xlcloak.token_engine import TokenRegistry
@@ -103,6 +103,7 @@ class Sanitizer:
         force: bool = False,
         bundle_path: Path | None = None,
         hide_all: bool = False,
+        allow_unsupported_surfaces: bool = False,
     ) -> SanitizeResult:
         """Run the full sanitize pipeline on *input_path*.
 
@@ -131,6 +132,15 @@ class Sanitizer:
         text_cells = list(reader.iter_text_cells(wb))
         warnings = reader.scan_surfaces(wb)
         sheet_names = [ws.title for ws in wb.worksheets]
+        blocking_surfaces = [w for w in warnings if w.surface_type in ("formula", "comment", "chart")]
+        if blocking_surfaces and not allow_unsupported_surfaces:
+            details = ", ".join(
+                sorted({f"{w.surface_type} on {w.cell.sheet_name}" for w in blocking_surfaces})
+            )
+            raise click.UsageError(
+                "Unsupported surfaces detected (security risk): "
+                f"{details}. Re-run with --allow-unsupported-surfaces to proceed anyway."
+            )
 
         # Detect and tokenize
         all_scan_results = []
@@ -171,7 +181,7 @@ class Sanitizer:
 
         # Write encrypted bundle
         bundle_writer = BundleWriter(self._password)
-        bundle_writer.write(
+        bundle_id = bundle_writer.write(
             bundle_path,
             registry.forward_map,
             registry.reverse_map,
@@ -179,6 +189,7 @@ class Sanitizer:
             sheet_names,
             len(registry),
         )
+        write_bundle_id_marker(sanitized_path, bundle_id)
 
         # Build and write manifest
         manifest = Manifest(
