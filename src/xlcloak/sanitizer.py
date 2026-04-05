@@ -153,10 +153,11 @@ class Sanitizer:
                     sheet_headers.setdefault(cell.sheet_name, {})[cell.col] = cell.value or ""
 
             for cell in text_cells:
-                if cell.row == 1:
-                    continue  # Never tokenize header row cells
-
-                col_header = sheet_headers.get(cell.sheet_name, {}).get(cell.col)
+                col_header = (
+                    sheet_headers.get(cell.sheet_name, {}).get(cell.col)
+                    if cell.row > 1
+                    else None
+                )
                 scan_results, replaced_text = self._detector.detect_cell(
                     cell, registry, column_header=col_header
                 )

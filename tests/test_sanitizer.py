@@ -185,29 +185,29 @@ def test_sanitize_hide_all_uses_stable_tokens(tmp_path, simple_fixture):
 # ---------------------------------------------------------------------------
 
 
-def test_sanitize_header_row_not_tokenized(tmp_path, simple_fixture):
-    """Row-1 cells must not appear as patches in normal (non-hide-all) detection mode."""
+def test_sanitize_row1_is_scanned(tmp_path):
+    """Row-1 text cells are scanned and tokenized when they contain PII."""
+    from openpyxl import Workbook, load_workbook
     from xlcloak.detector import PiiDetector
     from xlcloak.sanitizer import Sanitizer
-    from openpyxl import load_workbook
+
+    src = tmp_path / "row1.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws["A1"] = "John Smith"
+    wb.save(src)
 
     detector = PiiDetector()
     sanitizer = Sanitizer(detector)
-    output = tmp_path / "out.xlsx"
+    out = tmp_path / "out.xlsx"
     bundle = tmp_path / "out.xlcloak"
-    result = sanitizer.run(simple_fixture, output_path=output, bundle_path=bundle)
+    result = sanitizer.run(src, output_path=out, bundle_path=bundle)
 
-    # Load the sanitized output and verify row-1 cells are unchanged from source
-    source_wb = load_workbook(simple_fixture)
-    output_wb = load_workbook(result.sanitized_path)
-    for ws_source, ws_out in zip(source_wb.worksheets, output_wb.worksheets):
-        for col_idx in range(1, ws_source.max_column + 1):
-            source_val = ws_source.cell(row=1, column=col_idx).value
-            output_val = ws_out.cell(row=1, column=col_idx).value
-            assert source_val == output_val, (
-                f"Header cell ({ws_source.title}, row=1, col={col_idx}) "
-                f"was modified: '{source_val}' -> '{output_val}'"
-            )
+    out_wb = load_workbook(result.sanitized_path)
+    value = out_wb["Sheet1"]["A1"].value
+    assert isinstance(value, str)
+    assert value.startswith("PERSON_"), f"Expected row-1 value to be tokenized, got {value!r}"
 
 
 def test_sanitize_medium_fixture_hide_all_integration(tmp_path):

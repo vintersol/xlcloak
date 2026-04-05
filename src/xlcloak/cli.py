@@ -123,9 +123,11 @@ def sanitize(
                     sheet_headers.setdefault(cell_ref.sheet_name, {})[cell_ref.col] = cell_ref.value or ""
             all_results = []
             for cell_ref in text_cells:
-                if cell_ref.row == 1:
-                    continue
-                col_header = sheet_headers.get(cell_ref.sheet_name, {}).get(cell_ref.col)
+                col_header = (
+                    sheet_headers.get(cell_ref.sheet_name, {}).get(cell_ref.col)
+                    if cell_ref.row > 1
+                    else None
+                )
                 scan_results, _replaced = detector.detect_cell(cell_ref, registry, column_header=col_header)
                 all_results.extend(scan_results)
         except Exception as exc:
@@ -302,9 +304,11 @@ def inspect(file: Path, verbose: bool) -> None:
 
         all_results = []
         for cell_ref in text_cells:
-            if cell_ref.row == 1:
-                continue
-            col_header = sheet_headers.get(cell_ref.sheet_name, {}).get(cell_ref.col)
+            col_header = (
+                sheet_headers.get(cell_ref.sheet_name, {}).get(cell_ref.col)
+                if cell_ref.row > 1
+                else None
+            )
             scan_results, _replaced = detector.detect_cell(cell_ref, registry, column_header=col_header)
             all_results.extend(scan_results)
 

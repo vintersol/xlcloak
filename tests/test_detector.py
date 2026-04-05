@@ -300,6 +300,20 @@ def test_header_matches_pii_keyword_negative():
     assert not _header_matches_pii_keyword("")
 
 
+def test_obvious_header_label_positive():
+    from xlcloak.detector import _is_obvious_header_label
+    assert _is_obvious_header_label("Email")
+    assert _is_obvious_header_label("email_address")
+    assert _is_obvious_header_label("PHONE-NUMBER")
+    assert _is_obvious_header_label("Customer Name")
+
+
+def test_obvious_header_label_negative():
+    from xlcloak.detector import _is_obvious_header_label
+    assert not _is_obvious_header_label("John Smith")
+    assert not _is_obvious_header_label("Quarterly report")
+
+
 def test_header_boosting_detect_cell(tmp_path):
     """Verify detect_cell() uses boosted threshold when column_header matches a keyword.
 

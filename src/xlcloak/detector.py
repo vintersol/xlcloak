@@ -41,6 +41,31 @@ _PII_HEADER_KEYWORDS = frozenset({
 
 _BOOSTED_THRESHOLD = 0.3  # Used when column header indicates PII context
 
+_OBVIOUS_HEADER_LABELS = frozenset({
+    "name",
+    "full name",
+    "first name",
+    "last name",
+    "customer",
+    "customer name",
+    "contact",
+    "contact name",
+    "email",
+    "email address",
+    "e-mail",
+    "phone",
+    "phone number",
+    "mobile",
+    "company",
+    "company name",
+    "organization",
+    "organisation",
+    "ssn",
+    "person id",
+    "personid",
+    "personnummer",
+})
+
 
 def _header_matches_pii_keyword(header: str | None) -> bool:
     """Return True if the column header contains a PII-indicating keyword."""
@@ -48,6 +73,12 @@ def _header_matches_pii_keyword(header: str | None) -> bool:
         return False
     lower = header.lower()
     return any(kw in lower for kw in _PII_HEADER_KEYWORDS)
+
+
+def _is_obvious_header_label(text: str) -> bool:
+    """Return True if text looks like a schema/header label, not user content."""
+    normalized = " ".join(text.lower().replace("_", " ").replace("-", " ").split())
+    return normalized in _OBVIOUS_HEADER_LABELS
 
 
 class PiiDetector:
@@ -138,6 +169,19 @@ class PiiDetector:
             entities=PHASE2_ENTITIES,
             score_threshold=threshold,
         )
+
+        # Suppress obvious header labels (for example "Email") that may be
+        # misclassified by NER as PERSON.
+        raw_results = [
+            r
+            for r in raw_results
+            if not (
+                r.entity_type == "PERSON"
+                and r.start == 0
+                and r.end == len(cell.value)
+                and _is_obvious_header_label(cell.value)
+            )
+        ]
 
         # Deduplicate by span — keep highest-score result when two recognizers fire on same span
         seen_spans: dict[tuple[int, int], object] = {}
