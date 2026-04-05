@@ -69,6 +69,12 @@ def main() -> None:
     help="Replace every text cell with a stable token regardless of content",
 )
 @click.option(
+    "--allow-unsupported-surfaces",
+    is_flag=True,
+    default=False,
+    help="Deprecated compatibility flag; currently has no effect",
+)
+@click.option(
     "--verbose",
     is_flag=True,
     default=False,
@@ -83,6 +89,7 @@ def sanitize(
     text_mode: bool,
     force: bool,
     hide_all: bool,
+    allow_unsupported_surfaces: bool,
     verbose: bool,
 ) -> None:
     """Sanitize FILE, producing a sanitized xlsx, encrypted bundle, and manifest."""
@@ -163,6 +170,11 @@ def sanitize(
     if password == DEFAULT_PASSWORD:
         click.echo(
             "Warning: Using default password. Use --password for real encryption.",
+            err=True,
+        )
+    if allow_unsupported_surfaces:
+        click.echo(
+            "Warning: --allow-unsupported-surfaces is deprecated and has no effect.",
             err=True,
         )
 
