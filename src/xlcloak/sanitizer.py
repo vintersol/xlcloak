@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import click
 
-import xlcloak
 from xlcloak.bundle import DEFAULT_PASSWORD, BundleWriter
 from xlcloak.detector import PiiDetector
 from xlcloak.excel_io import WorkbookReader, WorkbookWriter
