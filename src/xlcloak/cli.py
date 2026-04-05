@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -106,9 +107,18 @@ def sanitize(
             registry = TokenRegistry()
             reader = WorkbookReader(file)
             wb = reader.open()
+            # Pre-pass: extract column headers (mirrors Sanitizer.run)
+            text_cells = list(reader.iter_text_cells(wb))
+            sheet_headers: dict[str, dict[int, str]] = {}
+            for cell_ref in text_cells:
+                if cell_ref.row == 1:
+                    sheet_headers.setdefault(cell_ref.sheet_name, {})[cell_ref.col] = cell_ref.value or ""
             all_results = []
-            for cell_ref in reader.iter_text_cells(wb):
-                scan_results, _replaced = detector.detect_cell(cell_ref, registry)
+            for cell_ref in text_cells:
+                if cell_ref.row == 1:
+                    continue
+                col_header = sheet_headers.get(cell_ref.sheet_name, {}).get(cell_ref.col)
+                scan_results, _replaced = detector.detect_cell(cell_ref, registry, column_header=col_header)
                 all_results.extend(scan_results)
         except Exception as exc:
             click.echo(f"Error: {exc}", err=True)
@@ -267,9 +277,18 @@ def inspect(file: Path, verbose: bool) -> None:
         reader = WorkbookReader(file)
         wb = reader.open()
 
+        text_cells = list(reader.iter_text_cells(wb))
+        sheet_headers: dict[str, dict[int, str]] = {}
+        for cell_ref in text_cells:
+            if cell_ref.row == 1:
+                sheet_headers.setdefault(cell_ref.sheet_name, {})[cell_ref.col] = cell_ref.value or ""
+
         all_results = []
-        for cell_ref in reader.iter_text_cells(wb):
-            scan_results, _replaced = detector.detect_cell(cell_ref, registry)
+        for cell_ref in text_cells:
+            if cell_ref.row == 1:
+                continue
+            col_header = sheet_headers.get(cell_ref.sheet_name, {}).get(cell_ref.col)
+            scan_results, _replaced = detector.detect_cell(cell_ref, registry, column_header=col_header)
             all_results.extend(scan_results)
 
         warnings = reader.scan_surfaces(wb)
@@ -387,6 +406,13 @@ def diff(file: Path, bundle_path: Path, password: str, verbose: bool) -> None:
 
     reverse_map: dict[str, str] = payload.get("reverse_map", {})
 
+    # Build compiled regex from reverse_map keys (same approach as restorer.py)
+    if reverse_map:
+        sorted_keys = sorted(reverse_map.keys(), key=len, reverse=True)
+        token_pattern = re.compile("|".join(re.escape(k) for k in sorted_keys))
+    else:
+        token_pattern = None
+
     try:
         reader = WorkbookReader(file)
         wb = reader.open()
@@ -399,11 +425,16 @@ def diff(file: Path, bundle_path: Path, password: str, verbose: bool) -> None:
     non_token_count = 0
 
     for cell_ref in reader.iter_text_cells(wb):
-        if cell_ref.value in reverse_map:
+        if token_pattern is None:
+            non_token_count += 1
+            continue
+        matches = token_pattern.findall(cell_ref.value)
+        if matches:
             cell_addr = get_column_letter(cell_ref.col) + str(cell_ref.row)
-            found_tokens.setdefault(cell_ref.value, []).append(
-                (cell_ref.sheet_name, cell_addr)
-            )
+            for token in matches:
+                found_tokens.setdefault(token, []).append(
+                    (cell_ref.sheet_name, cell_addr)
+                )
         else:
             non_token_count += 1
 
