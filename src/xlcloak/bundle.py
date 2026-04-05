@@ -115,6 +115,10 @@ class BundleReader:
             ValueError: If the password is wrong or the file is corrupted.
         """
         data = path.read_bytes()
+        if len(data) < SALT_LENGTH:
+            raise ValueError(
+                "Bundle file is too small -- corrupted or not a valid .xlcloak file"
+            )
         salt = data[:SALT_LENGTH]
         ciphertext = data[SALT_LENGTH:]
         key = _derive_key(self._password, salt)

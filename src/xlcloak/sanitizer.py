@@ -117,10 +117,10 @@ class Sanitizer:
         Raises:
             click.UsageError: If output files exist and force is False.
         """
-        sanitized_path, bundle_path, manifest_path = derive_output_paths(
+        sanitized_out, bundle_out, manifest_out = derive_output_paths(
             input_path, output_path, bundle_path
         )
-        check_overwrite([sanitized_path, bundle_path, manifest_path], force)
+        check_overwrite([sanitized_out, bundle_out, manifest_out], force)
 
         registry = TokenRegistry()
 
@@ -166,13 +166,13 @@ class Sanitizer:
                     cells_with_pii += 1
 
         # Write sanitized xlsx
-        writer = WorkbookWriter(input_path, sanitized_path)
+        writer = WorkbookWriter(input_path, sanitized_out)
         writer.patch_and_save(patches)
 
         # Write encrypted bundle
         bundle_writer = BundleWriter(self._password)
         bundle_writer.write(
-            bundle_path,
+            bundle_out,
             registry.forward_map,
             registry.reverse_map,
             input_path.name,
@@ -190,12 +190,12 @@ class Sanitizer:
         )
         manifest.add_scan_results(all_scan_results)
         manifest.add_warnings(warnings)
-        manifest_path.write_text(manifest.render())
+        manifest_out.write_text(manifest.render())
 
         return SanitizeResult(
-            sanitized_path=sanitized_path,
-            bundle_path=bundle_path,
-            manifest_path=manifest_path,
+            sanitized_path=sanitized_out,
+            bundle_path=bundle_out,
+            manifest_path=manifest_out,
             token_count=len(registry),
             cells_sanitized=cells_with_pii,
             entity_counts=manifest.entity_counts,
