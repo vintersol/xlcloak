@@ -2,115 +2,110 @@
 
 Reversible Excel text sanitization CLI for AI workflows.
 
-`xlcloak` sanitizes `.xlsx` files before sending them to AI tools — replacing names, emails, phone numbers, and other sensitive text with stable tokens — then restores the originals afterward via an encrypted bundle.
+`xlcloak` sanitizes `.xlsx` files before sending them to AI tools by replacing sensitive text with stable tokens, then restores originals afterward from an encrypted bundle.
 
-## Installation
+## Install
 
 ```bash
 pip install xlcloak
 python -m spacy download en_core_web_lg
 ```
 
-## Quick start
+## Overview
 
-A complete round-trip looks like this:
+1. Inspect an Excel file for PII.
+2. Sanitize and generate an encrypted restore bundle.
+3. Let AI edit the sanitized file.
+4. Diff AI changes against token expectations.
+5. Restore original values where tokens are intact.
 
-**1. Inspect before sanitizing**
+## Command quick reference
+
+| Command | What it does | Common use example |
+|---|---|---|
+| `xlcloak inspect <file>` | Scan for PII without writing files. | `xlcloak inspect report.xlsx --verbose` |
+| `xlcloak sanitize <file>` | Replace PII with tokens and create `.xlcloak` bundle. | `xlcloak sanitize report.xlsx --password "$XLCLOAK_PASSWORD"` |
+| `xlcloak diff <file>` | Show token changes between AI-edited file and bundle. | `xlcloak diff report_sanitized.xlsx --bundle report.xlcloak` |
+| `xlcloak restore <file>` | Restore original values from bundle into edited file. | `xlcloak restore report_sanitized.xlsx --bundle report.xlcloak --output report_restored.xlsx` |
+
+## Typical workflows
+
+### Safe default flow
 
 ```bash
 xlcloak inspect report.xlsx
-```
-
-Shows a summary of detected PII entities per sheet. Add `--verbose` to see confidence scores and detection method per entity.
-
-**2. Sanitize**
-
-```bash
-xlcloak sanitize report.xlsx
-```
-
-Produces three outputs:
-- `report_sanitized.xlsx` — the file to send to your AI tool (PII replaced with tokens like `PERSON_001`, `EMAIL_002`)
-- `report.xlcloak` — the encrypted restore bundle (contains the full token map, password-protected)
-- `report_sanitized_manifest.json` — a human-readable summary of what was replaced
-
-**3. Send the sanitized file to your AI tool**
-
-The AI sees only tokens, never the original names or emails.
-
-**4. Check what changed before restoring**
-
-```bash
+xlcloak sanitize report.xlsx --password "$XLCLOAK_PASSWORD"
 xlcloak diff report_sanitized.xlsx --bundle report.xlcloak
+xlcloak restore report_sanitized.xlsx --bundle report.xlcloak --output report_restored.xlsx
 ```
 
-Shows a table of cells where the AI modified or removed a token. Tokens that were deleted cannot be restored automatically.
-
-**5. Restore**
+### Dry-run detection only
 
 ```bash
-xlcloak restore report_sanitized.xlsx --bundle report.xlcloak
+xlcloak sanitize report.xlsx --dry-run --verbose
 ```
 
-Writes `report_restored.xlsx` with original values put back. Cells where the AI removed a token are skipped and reported.
+### Use explicit output paths
 
-## Commands
+```bash
+xlcloak sanitize report.xlsx \
+  --output out/report_sanitized.xlsx \
+  --bundle out/report.xlcloak
 
-### `xlcloak inspect <file>`
+xlcloak restore out/report_sanitized.xlsx \
+  --bundle out/report.xlcloak \
+  --output out/report_restored.xlsx
+```
 
-Scan an Excel file and report detected PII entities without modifying anything.
+## Options by command
 
-| Option | Description |
-|--------|-------------|
-| `--verbose` | Show confidence scores and detection method per entity |
-
-### `xlcloak sanitize <file>`
-
-Replace PII with stable tokens and produce an encrypted restore bundle.
-
-| Option | Description |
-|--------|-------------|
-| `--password TEXT` | Encryption password for the bundle. If omitted a random key is used and a warning is printed — not suitable for sensitive data. |
-| `--output PATH` | Output path for the sanitized file |
-| `--bundle PATH` | Explicit output path for the `.xlcloak` bundle |
-| `--dry-run` | Preview detection without writing any files |
-| `--text-mode` | Extract all text cells to a `.txt` file instead of token replacement |
-| `--force` | Overwrite existing output files |
-| `--verbose` | Show entity breakdown by type after sanitizing |
-
-### `xlcloak restore <file>`
-
-Decrypt the restore bundle and write a file with original values put back.
+### `inspect`
 
 | Option | Description |
-|--------|-------------|
-| `--bundle PATH` | Path to the `.xlcloak` restore bundle (required) |
-| `--password TEXT` | Decryption password |
-| `--output PATH` | Output path for the restored file |
-| `--force` | Overwrite existing output |
-| `--verbose` | Show list of AI-modified tokens that were skipped |
+|---|---|
+| `--verbose` | Show confidence scores and detection method per entity. |
 
-### `xlcloak diff <file>`
-
-Compare a (potentially AI-modified) sanitized file against the original bundle and show what changed.
+### `sanitize`
 
 | Option | Description |
-|--------|-------------|
-| `--bundle PATH` | Path to the `.xlcloak` restore bundle (required) |
-| `--password TEXT` | Decryption password |
-| `--verbose` | Also show unchanged token cells and non-token cell count |
+|---|---|
+| `--password TEXT` | Encryption password for the bundle. If omitted, a random key is used and a warning is printed (not suitable for sensitive data). |
+| `--output PATH` | Output path for the sanitized file. |
+| `--bundle PATH` | Explicit output path for the `.xlcloak` bundle. |
+| `--dry-run` | Preview detection without writing files. |
+| `--text-mode` | Extract all text cells to a `.txt` file instead of token replacement. |
+| `--force` | Overwrite existing output files. |
+| `--verbose` | Show entity breakdown by type after sanitizing. |
+
+### `diff`
+
+| Option | Description |
+|---|---|
+| `--bundle PATH` | Path to the `.xlcloak` restore bundle (required). |
+| `--password TEXT` | Decryption password. |
+| `--verbose` | Show unchanged token cells and non-token cell count. |
+
+### `restore`
+
+| Option | Description |
+|---|---|
+| `--bundle PATH` | Path to the `.xlcloak` restore bundle (required). |
+| `--password TEXT` | Decryption password. |
+| `--output PATH` | Output path for the restored file. |
+| `--force` | Overwrite existing output. |
+| `--verbose` | Show AI-modified tokens that were skipped. |
 
 ## Aliases
 
 | Alias | Equivalent |
-|-------|------------|
+|---|---|
 | `deidentify` | `sanitize` |
 | `identify` | `restore` |
 | `reconcile` | `restore` |
 
 ## How it works
 
-When you run `sanitize`, xlcloak detects PII using Microsoft Presidio and replaces each entity with a stable token (`PERSON_001`, `ORG_002`, `EMAIL_003`, and so on). The mapping from token back to original value is serialized and encrypted with Fernet symmetric encryption, using a PBKDF2-derived key from your password. The result is the `.xlcloak` bundle. When you run `restore`, xlcloak decrypts the bundle, looks up each token in the file, and writes the original value back. If the AI deleted or modified a token, that cell is skipped and reported rather than silently corrupted.
+`sanitize` detects PII with Microsoft Presidio and replaces each entity with stable tokens (`PERSON_001`, `ORG_002`, `EMAIL_003`, etc.). The token-to-original map is encrypted (Fernet + PBKDF2-derived key) in the `.xlcloak` bundle. `restore` decrypts that bundle and writes originals back where tokens are still present. If AI removed or altered a token, that cell is skipped and reported.
 
 ## License
 
