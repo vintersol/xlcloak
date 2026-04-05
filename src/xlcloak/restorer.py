@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -75,7 +76,11 @@ def render_report(result: RestoreResult) -> str:
         lines.append("")
         lines.append("Skipped tokens (not found in file -- likely modified by AI):")
         for sc in result.skipped_cells:
-            lines.append(f"  {sc['token']} (was: {sc['original']})")
+            count = int(sc.get("count", 1))
+            if count > 1:
+                lines.append(f"  {sc['token']} (was: {sc['original']}) x{count}")
+            else:
+                lines.append(f"  {sc['token']} (was: {sc['original']})")
 
     return "\n".join(lines)
 
@@ -125,6 +130,17 @@ class Restorer:
         # Decrypt bundle — raises ValueError on wrong password
         payload = BundleReader(self._password).read(bundle_path)
         reverse_map: dict[str, str] = payload["reverse_map"]
+        raw_occurrences = payload.get("token_occurrences", {})
+        if isinstance(raw_occurrences, dict) and raw_occurrences:
+            expected_occurrences = {
+                token: int(count)
+                for token, count in raw_occurrences.items()
+                if token in reverse_map and int(count) > 0
+            }
+            if not expected_occurrences:
+                expected_occurrences = {token: 1 for token in reverse_map}
+        else:
+            expected_occurrences = {token: 1 for token in reverse_map}
         bundle_version: str = payload.get("version", "")
         password_mode: str = payload.get("password_mode", "")
 
@@ -139,7 +155,7 @@ class Restorer:
         wb = reader.open()
 
         patches: list[tuple[str, int, int, str]] = []
-        found_tokens: set[str] = set()
+        found_token_occurrences: Counter[str] = Counter()
         cells_walked = 0
 
         # Build a compiled regex from all token keys, sorted longest-first to
@@ -159,24 +175,32 @@ class Restorer:
             cell_found: set[str] = set()
 
             def _replace(m: re.Match, _found: set[str] = cell_found) -> str:
-                _found.add(m.group(0))
-                return reverse_map[m.group(0)]
+                token = m.group(0)
+                _found.add(token)
+                found_token_occurrences[token] += 1
+                return reverse_map[token]
 
             new_value = token_pattern.sub(_replace, cell.value)
             if cell_found:
                 patches.append((cell.sheet_name, cell.row, cell.col, new_value))
-                found_tokens.update(cell_found)
 
         # Compute counts
         restored_count = len(patches)
-        all_tokens = set(reverse_map.keys())
-        missing_tokens = all_tokens - found_tokens
-        skipped_count = len(missing_tokens)
+        missing_occurrences: dict[str, int] = {}
+        for token, expected_count in expected_occurrences.items():
+            observed_count = found_token_occurrences.get(token, 0)
+            if observed_count < expected_count:
+                missing_occurrences[token] = expected_count - observed_count
+        skipped_count = sum(missing_occurrences.values())
         new_count = cells_walked - restored_count
 
         skipped_cells = [
-            {"token": tok, "original": reverse_map[tok]}
-            for tok in sorted(missing_tokens)
+            {
+                "token": tok,
+                "original": reverse_map[tok],
+                "count": missing_occurrences[tok],
+            }
+            for tok in sorted(missing_occurrences)
         ]
 
         # Write restored xlsx

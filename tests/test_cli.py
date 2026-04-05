@@ -412,6 +412,38 @@ def test_diff_verbose_shows_unchanged(tmp_path: Path) -> None:
     )
 
 
+def test_diff_detects_partial_loss_of_duplicate_token_occurrences(tmp_path: Path) -> None:
+    """diff should report missing occurrences when only some duplicate token cells remain."""
+    partial_sanitized = tmp_path / "partial_sanitized.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.cell(row=1, column=1).value = "PERSON_001"
+    ws.cell(row=2, column=1).value = "AI changed this"
+    wb.save(str(partial_sanitized))
+
+    bundle = tmp_path / "data.xlcloak"
+    BundleWriter(DEFAULT_PASSWORD).write(
+        bundle,
+        forward_map={"John Smith": "PERSON_001"},
+        reverse_map={"PERSON_001": "John Smith"},
+        original_filename="data.xlsx",
+        sheets_processed=["Sheet1"],
+        token_count=1,
+        token_occurrences={"PERSON_001": 2},
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        main, ["diff", str(partial_sanitized), "--bundle", str(bundle)]
+    )
+
+    assert result.exit_code == 0, f"Expected exit 0: {result.output}\n{result.exception}"
+    assert "1 token occurrence(s) changed by AI." in result.output
+    assert "PERSON_001" in result.output
+    assert "Missing Occurrences" in result.output
+
+
 def test_diff_wrong_password(tmp_path: Path) -> None:
     """diff with wrong password exits non-zero and shows error."""
     sanitized, bundle = _make_sanitized_xlsx_and_bundle(tmp_path)

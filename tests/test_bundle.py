@@ -46,6 +46,15 @@ def test_encrypt_decrypt_roundtrip(tmp_path):
     assert payload["reverse_map"] == SAMPLE_REVERSE
 
 
+def test_token_occurrences_roundtrip(tmp_path):
+    """token_occurrences metadata is preserved through encrypt/decrypt."""
+    bundle = tmp_path / "output.xlcloak"
+    _write_bundle(bundle, token_occurrences={"PERSON_001": 2, "EMAIL_002@example.com": 1})
+    payload = BundleReader().read(bundle)
+
+    assert payload["token_occurrences"] == {"PERSON_001": 2, "EMAIL_002@example.com": 1}
+
+
 def test_default_password_mode_flag(tmp_path):
     """Bundle written with the default password must be flagged as 'default'."""
     bundle = tmp_path / "output.xlcloak"

@@ -20,6 +20,8 @@ def _write_bundle(
     forward_map: dict[str, str],
     reverse_map: dict[str, str],
     password: str = DEFAULT_PASSWORD,
+    token_count: int | None = None,
+    token_occurrences: dict[str, int] | None = None,
 ) -> None:
     """Write a minimal bundle for testing."""
     BundleWriter(password).write(
@@ -28,7 +30,8 @@ def _write_bundle(
         reverse_map=reverse_map,
         original_filename="test.xlsx",
         sheets_processed=["Sheet1"],
-        token_count=len(forward_map),
+        token_count=len(forward_map) if token_count is None else token_count,
+        token_occurrences=token_occurrences,
     )
 
 
@@ -244,6 +247,37 @@ def test_restorer_skipped_cells_list(tmp_path: Path) -> None:
     for sc in result.skipped_cells:
         assert "original" in sc
         assert "token" in sc
+
+
+def test_restorer_detects_missing_occurrence_for_duplicate_token(tmp_path: Path) -> None:
+    """If one duplicate token occurrence is edited away, skipped_count should reflect it."""
+    from xlcloak.restorer import Restorer
+
+    sanitized = tmp_path / "data_sanitized.xlsx"
+    _write_xlsx(
+        sanitized,
+        [
+            (1, 1, "PERSON_001"),
+            (2, 1, "AI changed this cell"),
+        ],
+    )
+
+    bundle = tmp_path / "data.xlcloak"
+    _write_bundle(
+        bundle,
+        forward_map={"John Smith": "PERSON_001"},
+        reverse_map={"PERSON_001": "John Smith"},
+        token_count=1,
+        token_occurrences={"PERSON_001": 2},
+    )
+
+    result = Restorer().run(sanitized, bundle, force=True)
+
+    assert result.restored_count == 1
+    assert result.skipped_count == 1
+    assert result.skipped_cells == [
+        {"token": "PERSON_001", "original": "John Smith", "count": 1}
+    ]
 
 
 def test_restorer_wrong_password_raises_value_error(tmp_path: Path) -> None:

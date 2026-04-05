@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 
 import click
@@ -254,7 +255,11 @@ def restore(
         click.echo("")
         click.echo("Skipped tokens:")
         for sc in result.skipped_cells:
-            click.echo(f"  {sc['token']} (was: {sc['original']})")
+            count = int(sc.get("count", 1))
+            if count > 1:
+                click.echo(f"  {sc['token']} (was: {sc['original']}) x{count}")
+            else:
+                click.echo(f"  {sc['token']} (was: {sc['original']})")
 
 
 @main.command()
@@ -405,6 +410,17 @@ def diff(file: Path, bundle_path: Path, password: str, verbose: bool) -> None:
         sys.exit(1)
 
     reverse_map: dict[str, str] = payload.get("reverse_map", {})
+    raw_occurrences = payload.get("token_occurrences", {})
+    if isinstance(raw_occurrences, dict) and raw_occurrences:
+        expected_occurrences = {
+            token: int(count)
+            for token, count in raw_occurrences.items()
+            if token in reverse_map and int(count) > 0
+        }
+        if not expected_occurrences:
+            expected_occurrences = {token: 1 for token in reverse_map}
+    else:
+        expected_occurrences = {token: 1 for token in reverse_map}
 
     # Build compiled regex from reverse_map keys (same approach as restorer.py)
     if reverse_map:
@@ -422,6 +438,7 @@ def diff(file: Path, bundle_path: Path, password: str, verbose: bool) -> None:
 
     # Walk all text cells; classify as token (still present) or non-token
     found_tokens: dict[str, list[tuple[str, str]]] = {}  # token -> [(sheet, cell_addr), ...]
+    found_occurrences: Counter[str] = Counter()
     non_token_count = 0
 
     for cell_ref in reader.iter_text_cells(wb):
@@ -432,31 +449,40 @@ def diff(file: Path, bundle_path: Path, password: str, verbose: bool) -> None:
         if matches:
             cell_addr = get_column_letter(cell_ref.col) + str(cell_ref.row)
             for token in matches:
+                found_occurrences[token] += 1
                 found_tokens.setdefault(token, []).append(
                     (cell_ref.sheet_name, cell_addr)
                 )
         else:
             non_token_count += 1
 
-    # Tokens in bundle but no longer present in the file -> AI changed them
-    missing_tokens = set(reverse_map.keys()) - set(found_tokens.keys())
+    # Token occurrences expected from sanitize but not present in the file -> AI changed them
+    missing_occurrences: dict[str, int] = {}
+    for token, expected_count in expected_occurrences.items():
+        observed_count = found_occurrences.get(token, 0)
+        if observed_count < expected_count:
+            missing_occurrences[token] = expected_count - observed_count
+    missing_total = sum(missing_occurrences.values())
 
     # Summary header
-    if missing_tokens:
-        click.echo(f"{len(missing_tokens)} token(s) changed by AI.")
+    if missing_total:
+        click.echo(f"{missing_total} token occurrence(s) changed by AI.")
     else:
         click.echo("No tokens changed by AI.")
 
     # Table of missing (AI-modified) tokens
-    if missing_tokens:
+    if missing_occurrences:
         click.echo("")
-        click.echo(f"{len(missing_tokens)} token(s) modified by AI (no longer present in file):")
+        click.echo(
+            f"{missing_total} token occurrence(s) modified by AI (missing from file):"
+        )
         console = Console()
         table = Table(show_header=True, header_style="bold")
         table.add_column("Token")
         table.add_column("Original Value")
-        for token in sorted(missing_tokens):
-            table.add_row(token, reverse_map[token])
+        table.add_column("Missing Occurrences")
+        for token in sorted(missing_occurrences):
+            table.add_row(token, reverse_map[token], str(missing_occurrences[token]))
         console.print(table)
 
     # Verbose: also show unchanged tokens and non-token cell count

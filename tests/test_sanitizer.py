@@ -112,6 +112,23 @@ def test_manifest_written(tmp_path: Path, detector: PiiDetector) -> None:
     assert "Entity breakdown:" in manifest_text
 
 
+def test_manifest_counts_match_sanitize_result(tmp_path: Path, detector: PiiDetector) -> None:
+    """Manifest counters should match SanitizeResult counters exactly."""
+    input_path = tmp_path / "simple.xlsx"
+    shutil.copy2(SIMPLE_FIXTURE, input_path)
+
+    result = Sanitizer(detector).run(input_path)
+
+    manifest_lines = result.manifest_path.read_text().splitlines()
+    cells_line = next(line for line in manifest_lines if line.startswith("Cells sanitized:"))
+    tokens_line = next(line for line in manifest_lines if line.startswith("Tokens generated:"))
+    manifest_cells = int(cells_line.split(":", 1)[1].strip())
+    manifest_tokens = int(tokens_line.split(":", 1)[1].strip())
+
+    assert manifest_cells == result.cells_sanitized
+    assert manifest_tokens == result.token_count
+
+
 # ---------------------------------------------------------------------------
 # hide_all mode tests
 # ---------------------------------------------------------------------------

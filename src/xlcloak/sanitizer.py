@@ -134,11 +134,13 @@ class Sanitizer:
         all_scan_results = []
         patches: list[tuple[str, int, int, str]] = []
         cells_with_pii: int = 0
+        token_occurrences: dict[str, int] = {}
 
         if hide_all:
             for cell in text_cells:
                 token = registry.get_or_create(cell.value, EntityType.GENERIC)
                 patches.append((cell.sheet_name, cell.row, cell.col, token))
+                token_occurrences[token] = token_occurrences.get(token, 0) + 1
             cells_with_pii = len(patches)
             # all_scan_results stays empty — manifest entity breakdown is intentionally empty
         else:
@@ -160,6 +162,8 @@ class Sanitizer:
                 )
                 if scan_results:
                     all_scan_results.extend(scan_results)
+                    for result in scan_results:
+                        token_occurrences[result.token] = token_occurrences.get(result.token, 0) + 1
                     patches.append((cell.sheet_name, cell.row, cell.col, replaced_text))
                     cells_with_pii += 1
 
@@ -176,6 +180,7 @@ class Sanitizer:
             input_path.name,
             sheet_names,
             len(registry),
+            token_occurrences=token_occurrences,
         )
 
         # Build and write manifest

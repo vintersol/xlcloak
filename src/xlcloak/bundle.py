@@ -64,6 +64,7 @@ class BundleWriter:
         original_filename: str,
         sheets_processed: list[str],
         token_count: int,
+        token_occurrences: dict[str, int] | None = None,
     ) -> None:
         """Encrypt and write the bundle to *path*.
 
@@ -84,6 +85,7 @@ class BundleWriter:
             "password_mode": self._password_mode,
             "forward_map": forward_map,
             "reverse_map": reverse_map,
+            "token_occurrences": token_occurrences if token_occurrences is not None else {},
         }
 
         salt = os.urandom(SALT_LENGTH)
