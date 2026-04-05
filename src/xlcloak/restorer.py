@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import re
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from xlcloak.bundle import DEFAULT_PASSWORD, BundleReader
-from xlcloak.excel_io import WorkbookReader, WorkbookWriter, read_bundle_id_marker
+from xlcloak.excel_io import WorkbookReader, WorkbookWriter
 from xlcloak.sanitizer import check_overwrite
 
 
@@ -74,7 +76,11 @@ def render_report(result: RestoreResult) -> str:
         lines.append("")
         lines.append("Skipped tokens (not found in file -- likely modified by AI):")
         for sc in result.skipped_cells:
-            lines.append(f"  {sc['token']} (was: {sc['original']})")
+            count = int(sc.get("count", 1))
+            if count > 1:
+                lines.append(f"  {sc['token']} (was: {sc['original']}) x{count}")
+            else:
+                lines.append(f"  {sc['token']} (was: {sc['original']})")
 
     return "\n".join(lines)
 
@@ -100,7 +106,6 @@ class Restorer:
         bundle_path: Path,
         output_path: Path | None = None,
         force: bool = False,
-        allow_unbound_restore: bool = False,
     ) -> RestoreResult:
         """Run the restore pipeline on *sanitized_path* using *bundle_path*.
 
@@ -125,24 +130,19 @@ class Restorer:
         # Decrypt bundle — raises ValueError on wrong password
         payload = BundleReader(self._password).read(bundle_path)
         reverse_map: dict[str, str] = payload["reverse_map"]
-        bundle_id: str | None = payload.get("bundle_id")
+        raw_occurrences = payload.get("token_occurrences", {})
+        if isinstance(raw_occurrences, dict) and raw_occurrences:
+            expected_occurrences = {
+                token: int(count)
+                for token, count in raw_occurrences.items()
+                if token in reverse_map and int(count) > 0
+            }
+            if not expected_occurrences:
+                expected_occurrences = {token: 1 for token in reverse_map}
+        else:
+            expected_occurrences = {token: 1 for token in reverse_map}
         bundle_version: str = payload.get("version", "")
         password_mode: str = payload.get("password_mode", "")
-
-        marker_bundle_id = read_bundle_id_marker(sanitized_path)
-        if bundle_id:
-            if marker_bundle_id is None and not allow_unbound_restore:
-                raise ValueError(
-                    "Sanitized workbook is missing xlcloak bundle binding metadata. "
-                    "Use --allow-unbound-restore to bypass this check."
-                )
-            if marker_bundle_id is not None and marker_bundle_id != bundle_id:
-                raise ValueError("Bundle does not match the sanitized workbook (bundle_id mismatch)")
-        elif not allow_unbound_restore:
-            raise ValueError(
-                "Bundle is legacy/unbound and cannot be safely matched to workbook. "
-                "Use --allow-unbound-restore to proceed."
-            )
 
         # Derive output paths
         restored_path, manifest_path = derive_restore_paths(sanitized_path, output_path)
@@ -155,26 +155,52 @@ class Restorer:
         wb = reader.open()
 
         patches: list[tuple[str, int, int, str]] = []
-        found_tokens: set[str] = set()
+        found_token_occurrences: Counter[str] = Counter()
         cells_walked = 0
+
+        # Build a compiled regex from all token keys, sorted longest-first to
+        # avoid prefix collisions (e.g. PERSON_0019 before PERSON_001).
+        if reverse_map:
+            sorted_keys = sorted(reverse_map.keys(), key=len, reverse=True)
+            token_pattern: re.Pattern[str] | None = re.compile(
+                "|".join(re.escape(k) for k in sorted_keys)
+            )
+        else:
+            token_pattern = None
 
         for cell in reader.iter_text_cells(wb):
             cells_walked += 1
-            if cell.value in reverse_map:
-                original = reverse_map[cell.value]
-                patches.append((cell.sheet_name, cell.row, cell.col, original))
-                found_tokens.add(cell.value)
+            if token_pattern is None:
+                continue
+            cell_found: set[str] = set()
+
+            def _replace(m: re.Match, _found: set[str] = cell_found) -> str:
+                token = m.group(0)
+                _found.add(token)
+                found_token_occurrences[token] += 1
+                return reverse_map[token]
+
+            new_value = token_pattern.sub(_replace, cell.value)
+            if cell_found:
+                patches.append((cell.sheet_name, cell.row, cell.col, new_value))
 
         # Compute counts
         restored_count = len(patches)
-        all_tokens = set(reverse_map.keys())
-        missing_tokens = all_tokens - found_tokens
-        skipped_count = len(missing_tokens)
+        missing_occurrences: dict[str, int] = {}
+        for token, expected_count in expected_occurrences.items():
+            observed_count = found_token_occurrences.get(token, 0)
+            if observed_count < expected_count:
+                missing_occurrences[token] = expected_count - observed_count
+        skipped_count = sum(missing_occurrences.values())
         new_count = cells_walked - restored_count
 
         skipped_cells = [
-            {"token": tok, "original": reverse_map[tok]}
-            for tok in sorted(missing_tokens)
+            {
+                "token": tok,
+                "original": reverse_map[tok],
+                "count": missing_occurrences[tok],
+            }
+            for tok in sorted(missing_occurrences)
         ]
 
         # Write restored xlsx

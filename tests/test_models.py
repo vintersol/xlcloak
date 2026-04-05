@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 def test_entity_type_importable() -> None:
     from xlcloak.models import EntityType
@@ -11,7 +9,7 @@ def test_entity_type_importable() -> None:
     assert EntityType is not None
 
 
-def test_entity_type_has_seven_members() -> None:
+def test_entity_type_has_eight_members() -> None:
     from xlcloak.models import EntityType
 
     assert len(EntityType) == 8

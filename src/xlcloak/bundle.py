@@ -11,7 +11,6 @@ from __future__ import annotations
 import base64
 import json
 import os
-import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -65,8 +64,8 @@ class BundleWriter:
         original_filename: str,
         sheets_processed: list[str],
         token_count: int,
-        bundle_id: str | None = None,
-    ) -> str:
+        token_occurrences: dict[str, int] | None = None,
+    ) -> None:
         """Encrypt and write the bundle to *path*.
 
         Args:
@@ -76,13 +75,9 @@ class BundleWriter:
             original_filename: Basename of the source .xlsx file.
             sheets_processed: List of worksheet names that were sanitized.
             token_count: Total number of unique tokens created.
-            bundle_id: Optional bundle identity. If omitted, a random UUID4 is used.
         """
-        if bundle_id is None:
-            bundle_id = str(uuid.uuid4())
         payload: dict = {
             "version": xlcloak.__version__,
-            "bundle_id": bundle_id,
             "original_filename": original_filename,
             "created_at": datetime.now(tz=timezone.utc).isoformat(),
             "sheets_processed": sheets_processed,
@@ -90,13 +85,13 @@ class BundleWriter:
             "password_mode": self._password_mode,
             "forward_map": forward_map,
             "reverse_map": reverse_map,
+            "token_occurrences": token_occurrences if token_occurrences is not None else {},
         }
 
         salt = os.urandom(SALT_LENGTH)
         key = _derive_key(self._password, salt)
         ciphertext = Fernet(key).encrypt(json.dumps(payload).encode())
         path.write_bytes(salt + ciphertext)
-        return bundle_id
 
 
 class BundleReader:
@@ -122,6 +117,10 @@ class BundleReader:
             ValueError: If the password is wrong or the file is corrupted.
         """
         data = path.read_bytes()
+        if len(data) < SALT_LENGTH:
+            raise ValueError(
+                "Bundle file is too small -- corrupted or not a valid .xlcloak file"
+            )
         salt = data[:SALT_LENGTH]
         ciphertext = data[SALT_LENGTH:]
         key = _derive_key(self._password, salt)

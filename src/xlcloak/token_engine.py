@@ -41,9 +41,9 @@ class TokenFormatter:
             case EntityType.ORG:
                 return f"ORG_{counter:03d}"
             case EntityType.SSN_SE:
-                return f"1000000-{counter:04d}"
+                return f"SSN_SE_{counter:03d}"
             case EntityType.ORGNUM_SE:
-                return f"000000-{counter:04d}"
+                return f"ORGNUM_SE_{counter:03d}"
             case EntityType.GENERIC:
                 return f"CELL_{counter:04d}"
 

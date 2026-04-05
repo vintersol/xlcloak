@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 import sys
+from collections import Counter
 from pathlib import Path
 
 import click
@@ -12,24 +14,6 @@ from rich.table import Table
 
 import xlcloak
 from xlcloak.bundle import DEFAULT_PASSWORD
-
-
-def _resolve_password(password: str | None, use_default_password: bool) -> str:
-    """Resolve password input while keeping insecure default opt-in explicit."""
-    if password and use_default_password:
-        raise click.UsageError("Use either --password or --use-default-password, not both.")
-    if password:
-        return password
-    if use_default_password:
-        click.echo(
-            "Warning: Using insecure default password by explicit request.",
-            err=True,
-        )
-        return DEFAULT_PASSWORD
-    raise click.UsageError(
-        "Password is required. Use --password (or XLCLOAK_PASSWORD), "
-        "or pass --use-default-password to opt into insecure legacy mode."
-    )
 
 
 @click.group(context_settings={"auto_envvar_prefix": "XLCLOAK"})
@@ -42,15 +26,9 @@ def main() -> None:
 @click.argument("file", type=click.Path(exists=True, path_type=Path))
 @click.option(
     "--password",
-    default=None,
-    show_default=False,
+    default=DEFAULT_PASSWORD,
+    show_default=True,
     help="Encryption password for the restore bundle",
-)
-@click.option(
-    "--use-default-password",
-    is_flag=True,
-    default=False,
-    help="Use the built-in default password (unsafe; legacy compatibility only)",
 )
 @click.option(
     "--output",
@@ -91,12 +69,6 @@ def main() -> None:
     help="Replace every text cell with a stable token regardless of content",
 )
 @click.option(
-    "--allow-unsupported-surfaces",
-    is_flag=True,
-    default=False,
-    help="Proceed even when formulas/comments/charts are detected (unsafe)",
-)
-@click.option(
     "--verbose",
     is_flag=True,
     default=False,
@@ -104,15 +76,13 @@ def main() -> None:
 )
 def sanitize(
     file: Path,
-    password: str | None,
-    use_default_password: bool,
+    password: str,
     output_path: Path | None,
     bundle_path: Path | None,
     dry_run: bool,
     text_mode: bool,
     force: bool,
     hide_all: bool,
-    allow_unsupported_surfaces: bool,
     verbose: bool,
 ) -> None:
     """Sanitize FILE, producing a sanitized xlsx, encrypted bundle, and manifest."""
@@ -138,9 +108,18 @@ def sanitize(
             registry = TokenRegistry()
             reader = WorkbookReader(file)
             wb = reader.open()
+            # Pre-pass: extract column headers (mirrors Sanitizer.run)
+            text_cells = list(reader.iter_text_cells(wb))
+            sheet_headers: dict[str, dict[int, str]] = {}
+            for cell_ref in text_cells:
+                if cell_ref.row == 1:
+                    sheet_headers.setdefault(cell_ref.sheet_name, {})[cell_ref.col] = cell_ref.value or ""
             all_results = []
-            for cell_ref in reader.iter_text_cells(wb):
-                scan_results, _replaced = detector.detect_cell(cell_ref, registry)
+            for cell_ref in text_cells:
+                if cell_ref.row == 1:
+                    continue
+                col_header = sheet_headers.get(cell_ref.sheet_name, {}).get(cell_ref.col)
+                scan_results, _replaced = detector.detect_cell(cell_ref, registry, column_header=col_header)
                 all_results.extend(scan_results)
         except Exception as exc:
             click.echo(f"Error: {exc}", err=True)
@@ -181,19 +160,16 @@ def sanitize(
         click.echo(f"Text extracted: {text_out} ({len(text_cells)} cells)")
         return
 
-    resolved_password = _resolve_password(password, use_default_password)
+    if password == DEFAULT_PASSWORD:
+        click.echo(
+            "Warning: Using default password. Use --password for real encryption.",
+            err=True,
+        )
 
     try:
         detector = PiiDetector()
-        sanitizer = Sanitizer(detector, resolved_password)
-        result = sanitizer.run(
-            file,
-            output_path,
-            force,
-            bundle_path,
-            hide_all=hide_all,
-            allow_unsupported_surfaces=allow_unsupported_surfaces,
-        )
+        sanitizer = Sanitizer(detector, password)
+        result = sanitizer.run(file, output_path, force, bundle_path, hide_all=hide_all)
     except click.UsageError:
         raise
     except Exception as exc:
@@ -223,15 +199,9 @@ def sanitize(
 )
 @click.option(
     "--password",
-    default=None,
-    show_default=False,
+    default=DEFAULT_PASSWORD,
+    show_default=True,
     help="Decryption password for the bundle",
-)
-@click.option(
-    "--use-default-password",
-    is_flag=True,
-    default=False,
-    help="Use the built-in default password (unsafe; legacy compatibility only)",
 )
 @click.option(
     "--output",
@@ -252,30 +222,19 @@ def sanitize(
     default=False,
     help="Show detailed output including skipped token list",
 )
-@click.option(
-    "--allow-unbound-restore",
-    is_flag=True,
-    default=False,
-    help="Allow restoring from legacy/unbound bundles (unsafe)",
-)
 def restore(
     file: Path,
     bundle_path: Path,
-    password: str | None,
-    use_default_password: bool,
+    password: str,
     output_path: Path | None,
     force: bool,
     verbose: bool,
-    allow_unbound_restore: bool,
 ) -> None:
     """Restore FILE from a sanitized xlsx using the encrypted BUNDLE."""
     from xlcloak.restorer import Restorer
 
-    resolved_password = _resolve_password(password, use_default_password)
     try:
-        result = Restorer(resolved_password).run(
-            file, bundle_path, output_path, force, allow_unbound_restore=allow_unbound_restore
-        )
+        result = Restorer(password).run(file, bundle_path, output_path, force)
     except ValueError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
@@ -296,7 +255,11 @@ def restore(
         click.echo("")
         click.echo("Skipped tokens:")
         for sc in result.skipped_cells:
-            click.echo(f"  {sc['token']} (was: {sc['original']})")
+            count = int(sc.get("count", 1))
+            if count > 1:
+                click.echo(f"  {sc['token']} (was: {sc['original']}) x{count}")
+            else:
+                click.echo(f"  {sc['token']} (was: {sc['original']})")
 
 
 @main.command()
@@ -319,9 +282,18 @@ def inspect(file: Path, verbose: bool) -> None:
         reader = WorkbookReader(file)
         wb = reader.open()
 
+        text_cells = list(reader.iter_text_cells(wb))
+        sheet_headers: dict[str, dict[int, str]] = {}
+        for cell_ref in text_cells:
+            if cell_ref.row == 1:
+                sheet_headers.setdefault(cell_ref.sheet_name, {})[cell_ref.col] = cell_ref.value or ""
+
         all_results = []
-        for cell_ref in reader.iter_text_cells(wb):
-            scan_results, _replaced = detector.detect_cell(cell_ref, registry)
+        for cell_ref in text_cells:
+            if cell_ref.row == 1:
+                continue
+            col_header = sheet_headers.get(cell_ref.sheet_name, {}).get(cell_ref.col)
+            scan_results, _replaced = detector.detect_cell(cell_ref, registry, column_header=col_header)
             all_results.extend(scan_results)
 
         warnings = reader.scan_surfaces(wb)
@@ -438,6 +410,24 @@ def diff(file: Path, bundle_path: Path, password: str, verbose: bool) -> None:
         sys.exit(1)
 
     reverse_map: dict[str, str] = payload.get("reverse_map", {})
+    raw_occurrences = payload.get("token_occurrences", {})
+    if isinstance(raw_occurrences, dict) and raw_occurrences:
+        expected_occurrences = {
+            token: int(count)
+            for token, count in raw_occurrences.items()
+            if token in reverse_map and int(count) > 0
+        }
+        if not expected_occurrences:
+            expected_occurrences = {token: 1 for token in reverse_map}
+    else:
+        expected_occurrences = {token: 1 for token in reverse_map}
+
+    # Build compiled regex from reverse_map keys (same approach as restorer.py)
+    if reverse_map:
+        sorted_keys = sorted(reverse_map.keys(), key=len, reverse=True)
+        token_pattern = re.compile("|".join(re.escape(k) for k in sorted_keys))
+    else:
+        token_pattern = None
 
     try:
         reader = WorkbookReader(file)
@@ -448,36 +438,51 @@ def diff(file: Path, bundle_path: Path, password: str, verbose: bool) -> None:
 
     # Walk all text cells; classify as token (still present) or non-token
     found_tokens: dict[str, list[tuple[str, str]]] = {}  # token -> [(sheet, cell_addr), ...]
+    found_occurrences: Counter[str] = Counter()
     non_token_count = 0
 
     for cell_ref in reader.iter_text_cells(wb):
-        if cell_ref.value in reverse_map:
+        if token_pattern is None:
+            non_token_count += 1
+            continue
+        matches = token_pattern.findall(cell_ref.value)
+        if matches:
             cell_addr = get_column_letter(cell_ref.col) + str(cell_ref.row)
-            found_tokens.setdefault(cell_ref.value, []).append(
-                (cell_ref.sheet_name, cell_addr)
-            )
+            for token in matches:
+                found_occurrences[token] += 1
+                found_tokens.setdefault(token, []).append(
+                    (cell_ref.sheet_name, cell_addr)
+                )
         else:
             non_token_count += 1
 
-    # Tokens in bundle but no longer present in the file -> AI changed them
-    missing_tokens = set(reverse_map.keys()) - set(found_tokens.keys())
+    # Token occurrences expected from sanitize but not present in the file -> AI changed them
+    missing_occurrences: dict[str, int] = {}
+    for token, expected_count in expected_occurrences.items():
+        observed_count = found_occurrences.get(token, 0)
+        if observed_count < expected_count:
+            missing_occurrences[token] = expected_count - observed_count
+    missing_total = sum(missing_occurrences.values())
 
     # Summary header
-    if missing_tokens:
-        click.echo(f"{len(missing_tokens)} token(s) changed by AI.")
+    if missing_total:
+        click.echo(f"{missing_total} token occurrence(s) changed by AI.")
     else:
         click.echo("No tokens changed by AI.")
 
     # Table of missing (AI-modified) tokens
-    if missing_tokens:
+    if missing_occurrences:
         click.echo("")
-        click.echo(f"{len(missing_tokens)} token(s) modified by AI (no longer present in file):")
+        click.echo(
+            f"{missing_total} token occurrence(s) modified by AI (missing from file):"
+        )
         console = Console()
         table = Table(show_header=True, header_style="bold")
         table.add_column("Token")
         table.add_column("Original Value")
-        for token in sorted(missing_tokens):
-            table.add_row(token, reverse_map[token])
+        table.add_column("Missing Occurrences")
+        for token in sorted(missing_occurrences):
+            table.add_row(token, reverse_map[token], str(missing_occurrences[token]))
         console.print(table)
 
     # Verbose: also show unchanged tokens and non-token cell count

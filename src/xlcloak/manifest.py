@@ -33,12 +33,10 @@ class Manifest:
         self.warnings.extend(warnings)
 
     def add_scan_results(self, results: list[ScanResult]) -> None:
-        """Record PII scan results and update entity counts and counters."""
+        """Record PII scan results and update only the entity breakdown."""
         for result in results:
             key = result.entity_type.value
             self.entity_counts[key] = self.entity_counts.get(key, 0) + 1
-        self.cells_sanitized += len(results)
-        self.tokens_generated += len(results)
 
     def _format_warning_line(self, w: SurfaceWarning) -> str:
         """Format a single warning line with optional cell reference."""

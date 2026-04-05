@@ -140,9 +140,9 @@ def test_manifest_renders_entity_breakdown() -> None:
     assert "EMAIL: 1" in output
 
 
-def test_manifest_add_scan_results_updates_counters() -> None:
-    """add_scan_results increments cells_sanitized and tokens_generated."""
-    m = Manifest("scan.xlsx")
+def test_manifest_add_scan_results_keeps_existing_counters() -> None:
+    """add_scan_results updates entity counts but does not mutate top-level counters."""
+    m = Manifest("scan.xlsx", cells_sanitized=7, tokens_generated=3)
     results = [
         ScanResult(
             cell=CellRef("Sheet1", 1, 1),
@@ -152,5 +152,6 @@ def test_manifest_add_scan_results_updates_counters() -> None:
         ),
     ]
     m.add_scan_results(results)
-    assert m.cells_sanitized == 1
-    assert m.tokens_generated == 1
+    assert m.cells_sanitized == 7
+    assert m.tokens_generated == 3
+    assert m.entity_counts["ORG"] == 1

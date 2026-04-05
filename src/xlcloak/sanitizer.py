@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import click
 
-import xlcloak
 from xlcloak.bundle import DEFAULT_PASSWORD, BundleWriter
 from xlcloak.detector import PiiDetector
-from xlcloak.excel_io import WorkbookReader, WorkbookWriter, write_bundle_id_marker
+from xlcloak.excel_io import WorkbookReader, WorkbookWriter
 from xlcloak.manifest import Manifest
 from xlcloak.models import EntityType
 from xlcloak.token_engine import TokenRegistry
@@ -103,7 +101,6 @@ class Sanitizer:
         force: bool = False,
         bundle_path: Path | None = None,
         hide_all: bool = False,
-        allow_unsupported_surfaces: bool = False,
     ) -> SanitizeResult:
         """Run the full sanitize pipeline on *input_path*.
 
@@ -118,10 +115,10 @@ class Sanitizer:
         Raises:
             click.UsageError: If output files exist and force is False.
         """
-        sanitized_path, bundle_path, manifest_path = derive_output_paths(
+        sanitized_out, bundle_out, manifest_out = derive_output_paths(
             input_path, output_path, bundle_path
         )
-        check_overwrite([sanitized_path, bundle_path, manifest_path], force)
+        check_overwrite([sanitized_out, bundle_out, manifest_out], force)
 
         registry = TokenRegistry()
 
@@ -132,25 +129,18 @@ class Sanitizer:
         text_cells = list(reader.iter_text_cells(wb))
         warnings = reader.scan_surfaces(wb)
         sheet_names = [ws.title for ws in wb.worksheets]
-        blocking_surfaces = [w for w in warnings if w.surface_type in ("formula", "comment", "chart")]
-        if blocking_surfaces and not allow_unsupported_surfaces:
-            details = ", ".join(
-                sorted({f"{w.surface_type} on {w.cell.sheet_name}" for w in blocking_surfaces})
-            )
-            raise click.UsageError(
-                "Unsupported surfaces detected (security risk): "
-                f"{details}. Re-run with --allow-unsupported-surfaces to proceed anyway."
-            )
 
         # Detect and tokenize
         all_scan_results = []
         patches: list[tuple[str, int, int, str]] = []
         cells_with_pii: int = 0
+        token_occurrences: dict[str, int] = {}
 
         if hide_all:
             for cell in text_cells:
                 token = registry.get_or_create(cell.value, EntityType.GENERIC)
                 patches.append((cell.sheet_name, cell.row, cell.col, token))
+                token_occurrences[token] = token_occurrences.get(token, 0) + 1
             cells_with_pii = len(patches)
             # all_scan_results stays empty — manifest entity breakdown is intentionally empty
         else:
@@ -172,24 +162,26 @@ class Sanitizer:
                 )
                 if scan_results:
                     all_scan_results.extend(scan_results)
+                    for result in scan_results:
+                        token_occurrences[result.token] = token_occurrences.get(result.token, 0) + 1
                     patches.append((cell.sheet_name, cell.row, cell.col, replaced_text))
                     cells_with_pii += 1
 
         # Write sanitized xlsx
-        writer = WorkbookWriter(input_path, sanitized_path)
+        writer = WorkbookWriter(input_path, sanitized_out)
         writer.patch_and_save(patches)
 
         # Write encrypted bundle
         bundle_writer = BundleWriter(self._password)
-        bundle_id = bundle_writer.write(
-            bundle_path,
+        bundle_writer.write(
+            bundle_out,
             registry.forward_map,
             registry.reverse_map,
             input_path.name,
             sheet_names,
             len(registry),
+            token_occurrences=token_occurrences,
         )
-        write_bundle_id_marker(sanitized_path, bundle_id)
 
         # Build and write manifest
         manifest = Manifest(
@@ -201,12 +193,12 @@ class Sanitizer:
         )
         manifest.add_scan_results(all_scan_results)
         manifest.add_warnings(warnings)
-        manifest_path.write_text(manifest.render())
+        manifest_out.write_text(manifest.render())
 
         return SanitizeResult(
-            sanitized_path=sanitized_path,
-            bundle_path=bundle_path,
-            manifest_path=manifest_path,
+            sanitized_path=sanitized_out,
+            bundle_path=bundle_out,
+            manifest_path=manifest_out,
             token_count=len(registry),
             cells_sanitized=cells_with_pii,
             entity_counts=manifest.entity_counts,

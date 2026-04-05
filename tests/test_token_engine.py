@@ -105,7 +105,7 @@ def test_ssn_se_token_format() -> None:
 
     registry = TokenRegistry()
     token = registry.get_or_create("19900101-1234", EntityType.SSN_SE)
-    assert re.match(r"^1000000-\d{4}$", token), f"Unexpected format: {token}"
+    assert re.match(r"^SSN_SE_\d{3}$", token), f"Unexpected format: {token}"
 
 
 def test_orgnum_se_token_format() -> None:
@@ -113,7 +113,7 @@ def test_orgnum_se_token_format() -> None:
 
     registry = TokenRegistry()
     token = registry.get_or_create("556123-4567", EntityType.ORGNUM_SE)
-    assert re.match(r"^000000-\d{4}$", token), f"Unexpected format: {token}"
+    assert re.match(r"^ORGNUM_SE_\d{3}$", token), f"Unexpected format: {token}"
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +283,7 @@ def test_formatter_ssn_se() -> None:
 
     fmt = TokenFormatter()
     result = fmt.format(EntityType.SSN_SE, 1)
-    assert re.match(r"^1000000-\d{4}$", result)
+    assert re.match(r"^SSN_SE_\d{3}$", result)
 
 
 def test_formatter_orgnum_se() -> None:
@@ -291,7 +291,7 @@ def test_formatter_orgnum_se() -> None:
 
     fmt = TokenFormatter()
     result = fmt.format(EntityType.ORGNUM_SE, 1)
-    assert re.match(r"^000000-\d{4}$", result)
+    assert re.match(r"^ORGNUM_SE_\d{3}$", result)
 
 
 def test_formatter_overflow_raises() -> None:

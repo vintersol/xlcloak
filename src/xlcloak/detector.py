@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import warnings
+
 import spacy.util
 from presidio_analyzer import AnalyzerEngine
 from presidio_analyzer.nlp_engine import NlpEngineProvider
@@ -125,7 +127,8 @@ class PiiDetector:
         Raises:
             AssertionError: If ``cell.value`` is ``None``.
         """
-        assert cell.value is not None, "cell.value must not be None"
+        if cell.value is None:
+            raise ValueError("cell.value must not be None")
 
         analyzer = self._get_analyzer()
         threshold = _BOOSTED_THRESHOLD if _header_matches_pii_keyword(column_header) else self._threshold
@@ -170,7 +173,13 @@ class PiiDetector:
 
         for result in sorted_results:
             original = cell.value[result.start : result.end]
-            entity_type = PRESIDIO_TO_ENTITY_TYPE[result.entity_type]
+            entity_type = PRESIDIO_TO_ENTITY_TYPE.get(result.entity_type)
+            if entity_type is None:
+                warnings.warn(
+                    f"Unknown Presidio entity type '{result.entity_type}' -- falling back to GENERIC",
+                    stacklevel=2,
+                )
+                entity_type = EntityType.GENERIC
             token = registry.get_or_create(original, entity_type)
             detection_method = (
                 "NER"
