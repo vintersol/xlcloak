@@ -45,6 +45,18 @@ xlcloak restore report_sanitized.xlsx --bundle report.xlcloak --output report_re
 xlcloak sanitize report.xlsx --dry-run --verbose
 ```
 
+### Force specific columns to full tokenization
+
+```bash
+xlcloak sanitize report.xlsx -f Data.B -f Vendors.C
+```
+
+### Tokenize only selected columns (skip Presidio/spaCy)
+
+```bash
+xlcloak sanitize report.xlsx --columns-only -f Data.B -f Vendors.C
+```
+
 ### Use explicit output paths
 
 ```bash
@@ -75,6 +87,8 @@ xlcloak restore out/report_sanitized.xlsx \
 | `--dry-run` | Preview detection without writing files. |
 | `--text-mode` | Extract all text cells to a `.txt` file instead of token replacement. |
 | `--force` | Overwrite existing output files. |
+| `-f, --full-column Sheet.Col` | Force full-cell tokenization for selected columns (repeatable). |
+| `--columns-only` | Only tokenize selected `--full-column` columns; skip Presidio/spaCy. |
 | `--verbose` | Show entity breakdown by type after sanitizing. |
 
 ### `diff`

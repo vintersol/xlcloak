@@ -1,4 +1,4 @@
-"""Sanitizer orchestrator — wires detection, tokenization, bundle, and manifest."""
+"""Sanitizer orchestrator - wires detection, tokenization, bundle, and manifest."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import click
+from openpyxl.utils.cell import column_index_from_string
 
 from xlcloak.bundle import DEFAULT_PASSWORD, BundleWriter
 from xlcloak.detector import PiiDetector
@@ -25,6 +26,49 @@ class SanitizeResult:
     token_count: int
     cells_sanitized: int
     entity_counts: dict[str, int] = field(default_factory=dict)
+
+
+def parse_full_column_specs(
+    specs: tuple[str, ...] | list[str],
+    sheet_names: list[str],
+) -> set[tuple[str, int]]:
+    """Parse and validate ``--full-column`` specs in ``Sheet.Col`` format."""
+    resolved: set[tuple[str, int]] = set()
+    known_sheets = set(sheet_names)
+
+    for spec in specs:
+        if spec.count(".") != 1:
+            raise click.UsageError(
+                f"Invalid --full-column value '{spec}'. Expected format: Sheet.Col"
+            )
+
+        sheet_name, col_part = spec.split(".", 1)
+        sheet_name = sheet_name.strip()
+        col_part = col_part.strip()
+
+        if not sheet_name or not col_part:
+            raise click.UsageError(
+                f"Invalid --full-column value '{spec}'. Expected format: Sheet.Col"
+            )
+        if sheet_name not in known_sheets:
+            raise click.UsageError(
+                f"Unknown sheet '{sheet_name}' in --full-column '{spec}'."
+            )
+        if not col_part.isalpha():
+            raise click.UsageError(
+                f"Invalid column '{col_part}' in --full-column '{spec}'. "
+                "Column must be letters like A, B, AA."
+            )
+        try:
+            col_index = column_index_from_string(col_part.upper())
+        except ValueError as exc:
+            raise click.UsageError(
+                f"Invalid column '{col_part}' in --full-column '{spec}'."
+            ) from exc
+
+        resolved.add((sheet_name, col_index))
+
+    return resolved
 
 
 def derive_output_paths(
@@ -82,7 +126,7 @@ class Sanitizer:
 
     def __init__(
         self,
-        detector: PiiDetector,
+        detector: PiiDetector | None,
         password: str = DEFAULT_PASSWORD,
     ) -> None:
         """Initialize Sanitizer.
@@ -101,6 +145,8 @@ class Sanitizer:
         force: bool = False,
         bundle_path: Path | None = None,
         hide_all: bool = False,
+        full_columns: tuple[str, ...] | list[str] = (),
+        columns_only: bool = False,
     ) -> SanitizeResult:
         """Run the full sanitize pipeline on *input_path*.
 
@@ -115,6 +161,9 @@ class Sanitizer:
         Raises:
             click.UsageError: If output files exist and force is False.
         """
+        if hide_all and columns_only:
+            raise click.UsageError("--hide-all and --columns-only cannot be used together.")
+
         sanitized_out, bundle_out, manifest_out = derive_output_paths(
             input_path, output_path, bundle_path
         )
@@ -129,30 +178,53 @@ class Sanitizer:
         text_cells = list(reader.iter_text_cells(wb))
         warnings = reader.scan_surfaces(wb)
         sheet_names = [ws.title for ws in wb.worksheets]
+        forced_targets = parse_full_column_specs(full_columns, sheet_names)
+        if columns_only and not forced_targets:
+            raise click.UsageError("--columns-only requires at least one --full-column/-f.")
 
         # Detect and tokenize
         all_scan_results = []
         patches: list[tuple[str, int, int, str]] = []
         cells_with_pii: int = 0
         token_occurrences: dict[str, int] = {}
+        processed_cells: set[tuple[str, int, int]] = set()
+
+        # Forced columns are always processed first and excluded from detection.
+        for cell in text_cells:
+            if (cell.sheet_name, cell.col) not in forced_targets:
+                continue
+            token = registry.get_or_create(cell.value, EntityType.GENERIC)
+            patches.append((cell.sheet_name, cell.row, cell.col, token))
+            token_occurrences[token] = token_occurrences.get(token, 0) + 1
+            cells_with_pii += 1
+            processed_cells.add((cell.sheet_name, cell.row, cell.col))
 
         if hide_all:
             for cell in text_cells:
+                cell_key = (cell.sheet_name, cell.row, cell.col)
+                if cell_key in processed_cells:
+                    continue
                 token = registry.get_or_create(cell.value, EntityType.GENERIC)
                 patches.append((cell.sheet_name, cell.row, cell.col, token))
                 token_occurrences[token] = token_occurrences.get(token, 0) + 1
-            cells_with_pii = len(patches)
-            # all_scan_results stays empty — manifest entity breakdown is intentionally empty
-        else:
+                cells_with_pii += 1
+            # all_scan_results stays empty - manifest entity breakdown is intentionally empty
+        elif not columns_only:
+            if self._detector is None:
+                raise RuntimeError("PiiDetector is required unless --columns-only is used.")
+
             # Pre-pass: extract column headers from row-1 cells, grouped by sheet
             # Structure: {sheet_name: {col_index: header_text}}
-            # text_cells is already a list, so this iteration is safe
             sheet_headers: dict[str, dict[int, str]] = {}
             for cell in text_cells:
                 if cell.row == 1:
                     sheet_headers.setdefault(cell.sheet_name, {})[cell.col] = cell.value or ""
 
             for cell in text_cells:
+                cell_key = (cell.sheet_name, cell.row, cell.col)
+                if cell_key in processed_cells:
+                    continue
+
                 col_header = (
                     sheet_headers.get(cell.sheet_name, {}).get(cell.col)
                     if cell.row > 1

@@ -69,6 +69,19 @@ def main() -> None:
     help="Replace every text cell with a stable token regardless of content",
 )
 @click.option(
+    "-f",
+    "--full-column",
+    "full_columns",
+    multiple=True,
+    help="Force full-cell tokenization for Sheet.Col (repeatable)",
+)
+@click.option(
+    "--columns-only",
+    is_flag=True,
+    default=False,
+    help="Only tokenize columns passed via --full-column/-f; skip Presidio/spaCy",
+)
+@click.option(
     "--allow-unsupported-surfaces",
     is_flag=True,
     default=False,
@@ -89,14 +102,22 @@ def sanitize(
     text_mode: bool,
     force: bool,
     hide_all: bool,
+    full_columns: tuple[str, ...],
+    columns_only: bool,
     allow_unsupported_surfaces: bool,
     verbose: bool,
 ) -> None:
     """Sanitize FILE, producing a sanitized xlsx, encrypted bundle, and manifest."""
     from xlcloak.detector import PiiDetector
     from xlcloak.excel_io import WorkbookReader
-    from xlcloak.sanitizer import Sanitizer, derive_output_paths
+    from xlcloak.models import EntityType
+    from xlcloak.sanitizer import Sanitizer, derive_output_paths, parse_full_column_specs
     from xlcloak.token_engine import TokenRegistry
+
+    if hide_all and columns_only:
+        raise click.UsageError("--hide-all and --columns-only cannot be used together.")
+    if columns_only and not full_columns:
+        raise click.UsageError("--columns-only requires at least one --full-column/-f.")
 
     if dry_run:
         if hide_all:
@@ -111,18 +132,37 @@ def sanitize(
             click.echo("No files written.")
             return
         try:
-            detector = PiiDetector()
             registry = TokenRegistry()
             reader = WorkbookReader(file)
             wb = reader.open()
-            # Pre-pass: extract column headers (mirrors Sanitizer.run)
             text_cells = list(reader.iter_text_cells(wb))
+            forced_targets = parse_full_column_specs(full_columns, [ws.title for ws in wb.worksheets])
+
+            if columns_only:
+                forced_count = sum(
+                    1
+                    for cell_ref in text_cells
+                    if (cell_ref.sheet_name, cell_ref.col) in forced_targets
+                )
+                click.echo(f"Dry run (columns-only): {file.name}")
+                click.echo(
+                    f"Would replace {forced_count} text cells across {len(forced_targets)} forced column(s)."
+                )
+                click.echo("No files written.")
+                return
+
+            detector = PiiDetector()
             sheet_headers: dict[str, dict[int, str]] = {}
             for cell_ref in text_cells:
                 if cell_ref.row == 1:
                     sheet_headers.setdefault(cell_ref.sheet_name, {})[cell_ref.col] = cell_ref.value or ""
             all_results = []
+            forced_replacements = 0
             for cell_ref in text_cells:
+                if (cell_ref.sheet_name, cell_ref.col) in forced_targets:
+                    registry.get_or_create(cell_ref.value, EntityType.GENERIC)
+                    forced_replacements += 1
+                    continue
                 col_header = (
                     sheet_headers.get(cell_ref.sheet_name, {}).get(cell_ref.col)
                     if cell_ref.row > 1
@@ -142,8 +182,15 @@ def sanitize(
             click.echo(f"Would replace {len(registry)} unique entities across {len(all_results)} detections:")
             for etype, count in sorted(entity_counts.items()):
                 click.echo(f"  {etype}: {count}")
+        elif forced_replacements > 0:
+            click.echo(
+                f"Would replace {len(registry)} unique entities across "
+                f"{forced_replacements} forced replacements."
+            )
         else:
-            click.echo("No entities detected — no changes would be made.")
+            click.echo("No entities detected - no changes would be made.")
+        if forced_replacements > 0:
+            click.echo(f"Forced-column replacements: {forced_replacements}")
         click.echo("No files written.")
         return
 
@@ -181,9 +228,17 @@ def sanitize(
         )
 
     try:
-        detector = PiiDetector()
+        detector = None if columns_only else PiiDetector()
         sanitizer = Sanitizer(detector, password)
-        result = sanitizer.run(file, output_path, force, bundle_path, hide_all=hide_all)
+        result = sanitizer.run(
+            file,
+            output_path,
+            force,
+            bundle_path,
+            hide_all=hide_all,
+            full_columns=full_columns,
+            columns_only=columns_only,
+        )
     except click.UsageError:
         raise
     except Exception as exc:
@@ -200,8 +255,6 @@ def sanitize(
         click.echo("Entity breakdown:")
         for entity_type, count in sorted(result.entity_counts.items()):
             click.echo(f"  {entity_type}: {count}")
-
-
 @main.command()
 @click.argument("file", type=click.Path(exists=True, path_type=Path))
 @click.option(
@@ -285,7 +338,7 @@ def restore(
     help="Show confidence scores and detection method",
 )
 def inspect(file: Path, verbose: bool) -> None:
-    """Preview what sanitize would do — no files written."""
+    """Preview what sanitize would do â€” no files written."""
     from xlcloak.detector import PiiDetector
     from xlcloak.excel_io import WorkbookReader
     from xlcloak.token_engine import TokenRegistry
@@ -369,7 +422,7 @@ def inspect(file: Path, verbose: bool) -> None:
 
     # Warnings section
     # Filter to only surface-type warnings that indicate unsupported surfaces
-    # (formulas, charts, comments — not info-level items like merged cells)
+    # (formulas, charts, comments â€” not info-level items like merged cells)
     unsupported_warnings = [
         w
         for w in warnings
@@ -412,7 +465,7 @@ def inspect(file: Path, verbose: bool) -> None:
     help="Also show unchanged token cells and new cells",
 )
 def diff(file: Path, bundle_path: Path, password: str, verbose: bool) -> None:
-    """Show what changed between a sanitized FILE and its BUNDLE — no files written."""
+    """Show what changed between a sanitized FILE and its BUNDLE â€” no files written."""
     from xlcloak.bundle import BundleReader
     from xlcloak.excel_io import WorkbookReader
 
@@ -529,3 +582,4 @@ def diff(file: Path, bundle_path: Path, password: str, verbose: bool) -> None:
 main.add_command(restore, name="reconcile")    # reconcile -> restore (D-01, CLI-05)
 main.add_command(sanitize, name="deidentify")  # deidentify -> sanitize (D-02, CLI-07)
 main.add_command(restore, name="identify")     # identify -> restore (D-02, CLI-07)
+
