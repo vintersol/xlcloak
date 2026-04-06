@@ -510,3 +510,235 @@ def test_restorer_restored_count_counts_cells_not_tokens(tmp_path: Path) -> None
     result = Restorer().run(sanitized, bundle, force=True)
     # One cell was patched (even though two tokens were in it)
     assert result.restored_count == 1
+
+
+# ---------------------------------------------------------------------------
+# Tests: edited sanitized workbook scenarios
+# ---------------------------------------------------------------------------
+
+
+def test_restorer_handles_row_reorder_and_insertions(tmp_path: Path) -> None:
+    """Row inserts/reorders in sanitized files still restore by token text."""
+    from xlcloak.restorer import Restorer
+
+    sanitized = tmp_path / "edited_sanitized.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws["A1"] = "header"
+    ws["A2"] = "PERSON_001"
+    ws["A3"] = "EMAIL_002@example.com"
+    ws["A4"] = "tail"
+
+    # Simulate spreadsheet edits after sanitize:
+    # 1) insert a row near tokens
+    # 2) reorder the two token rows
+    ws.insert_rows(2, amount=1)
+    token_a = ws["A3"].value
+    token_b = ws["A4"].value
+    ws["A3"] = token_b
+    ws["A4"] = token_a
+    wb.save(str(sanitized))
+
+    bundle = tmp_path / "data.xlcloak"
+    _write_bundle(bundle, FORWARD_MAP, REVERSE_MAP)
+
+    result = Restorer().run(sanitized, bundle, force=True)
+    assert result.restored_count == 2
+    assert result.skipped_count == 1
+
+    restored_wb = openpyxl.load_workbook(str(result.restored_path))
+    restored_ws = restored_wb["Sheet1"]
+    assert restored_ws["A3"].value == "jane@example.com"
+    assert restored_ws["A4"].value == "John Smith"
+
+
+def test_restorer_counts_deleted_token_rows_as_skipped(tmp_path: Path) -> None:
+    """Deleting rows with tokens is reported via skipped_count."""
+    from xlcloak.restorer import Restorer
+
+    sanitized = tmp_path / "edited_sanitized.xlsx"
+    _write_xlsx(
+        sanitized,
+        [
+            (1, 1, "PERSON_001"),
+            (2, 1, "EMAIL_002@example.com"),
+            (3, 1, "PERSON_003"),
+        ],
+    )
+
+    wb = openpyxl.load_workbook(str(sanitized))
+    ws = wb["Sheet1"]
+    ws.delete_rows(3, 1)
+    wb.save(str(sanitized))
+
+    bundle = tmp_path / "data.xlcloak"
+    _write_bundle(bundle, FORWARD_MAP, REVERSE_MAP)
+
+    result = Restorer().run(sanitized, bundle, force=True)
+    assert result.restored_count == 2
+    assert result.skipped_count == 1
+    assert result.skipped_cells == [{"token": "PERSON_003", "original": "Bob Jones", "count": 1}]
+
+
+def test_restorer_handles_cut_paste_to_new_location(tmp_path: Path) -> None:
+    """Moving a token cell (cut/paste) restores at its new location."""
+    from xlcloak.restorer import Restorer
+
+    sanitized = tmp_path / "edited_sanitized.xlsx"
+    _write_xlsx(sanitized, [(1, 1, "PERSON_001"), (2, 1, "EMAIL_002@example.com")])
+
+    wb = openpyxl.load_workbook(str(sanitized))
+    ws = wb["Sheet1"]
+    ws["C5"] = ws["A1"].value
+    ws["A1"] = "moved elsewhere"
+    wb.save(str(sanitized))
+
+    bundle = tmp_path / "data.xlcloak"
+    _write_bundle(bundle, FORWARD_MAP, REVERSE_MAP)
+
+    result = Restorer().run(sanitized, bundle, force=True)
+    assert result.restored_count == 2
+    assert result.skipped_count == 1
+
+    restored_wb = openpyxl.load_workbook(str(result.restored_path))
+    restored_ws = restored_wb["Sheet1"]
+    assert restored_ws["C5"].value == "John Smith"
+    assert restored_ws["A1"].value == "moved elsewhere"
+
+
+def test_restorer_treats_tampered_token_as_missing(tmp_path: Path) -> None:
+    """Manually edited token text is not restored and counts as skipped."""
+    from xlcloak.restorer import Restorer
+
+    sanitized = tmp_path / "edited_sanitized.xlsx"
+    _write_xlsx(sanitized, [(1, 1, "PERSON_00X"), (2, 1, "EMAIL_002@example.com")])
+
+    bundle = tmp_path / "data.xlcloak"
+    _write_bundle(bundle, FORWARD_MAP, REVERSE_MAP)
+
+    result = Restorer().run(sanitized, bundle, force=True)
+    assert result.restored_count == 1
+    assert result.skipped_count == 2
+    assert any(entry["token"] == "PERSON_001" for entry in result.skipped_cells)
+
+
+def test_restorer_preserves_surrounding_user_edits_in_mixed_cell(tmp_path: Path) -> None:
+    """When users edit surrounding text, embedded tokens still restore in place."""
+    from xlcloak.restorer import Restorer
+
+    sanitized = tmp_path / "edited_sanitized.xlsx"
+    _write_xlsx(
+        sanitized,
+        [(1, 1, "URGENT - contact PERSON_001 before 17:00 via EMAIL_002@example.com")],
+    )
+
+    bundle = tmp_path / "data.xlcloak"
+    _write_bundle(bundle, FORWARD_MAP, REVERSE_MAP)
+
+    result = Restorer().run(sanitized, bundle, force=True)
+    assert result.restored_count == 1
+
+    restored_wb = openpyxl.load_workbook(str(result.restored_path))
+    restored_ws = restored_wb["Sheet1"]
+    assert restored_ws["A1"].value == "URGENT - contact John Smith before 17:00 via jane@example.com"
+
+
+def test_restorer_handles_sheet_rename(tmp_path: Path) -> None:
+    """Renaming a sheet in sanitized workbook should not block restoration."""
+    from xlcloak.restorer import Restorer
+
+    sanitized = tmp_path / "edited_sanitized.xlsx"
+    _write_xlsx(sanitized, [(1, 1, "PERSON_001")])
+
+    wb = openpyxl.load_workbook(str(sanitized))
+    ws = wb["Sheet1"]
+    ws.title = "Renamed"
+    wb.save(str(sanitized))
+
+    bundle = tmp_path / "data.xlcloak"
+    _write_bundle(bundle, {"John Smith": "PERSON_001"}, {"PERSON_001": "John Smith"})
+
+    result = Restorer().run(sanitized, bundle, force=True)
+    assert result.restored_count == 1
+
+    restored_wb = openpyxl.load_workbook(str(result.restored_path))
+    assert "Renamed" in restored_wb.sheetnames
+    assert restored_wb["Renamed"]["A1"].value == "John Smith"
+
+
+def test_restorer_keeps_formula_cells_intact_while_restoring_inputs(tmp_path: Path) -> None:
+    """Formula cells remain formulas; referenced token cells get restored."""
+    from xlcloak.restorer import Restorer
+
+    sanitized = tmp_path / "edited_sanitized.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws["A1"] = "PERSON_001"
+    ws["B1"] = '=A1&" ok"'
+    wb.save(str(sanitized))
+
+    bundle = tmp_path / "data.xlcloak"
+    _write_bundle(bundle, {"John Smith": "PERSON_001"}, {"PERSON_001": "John Smith"})
+
+    result = Restorer().run(sanitized, bundle, force=True)
+    assert result.restored_count == 1
+
+    restored_wb = openpyxl.load_workbook(str(result.restored_path), data_only=False)
+    restored_ws = restored_wb["Sheet1"]
+    assert restored_ws["A1"].value == "John Smith"
+    assert restored_ws["B1"].data_type == "f"
+    assert restored_ws["B1"].value == '=A1&" ok"'
+
+
+def test_restorer_preserves_data_validation_and_comments(tmp_path: Path) -> None:
+    """Workbook metadata survives restore copy-then-patch flow."""
+    from openpyxl.comments import Comment
+    from openpyxl.worksheet.datavalidation import DataValidation
+    from xlcloak.restorer import Restorer
+
+    sanitized = tmp_path / "edited_sanitized.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws["A1"] = "PERSON_001"
+    ws["A1"].comment = Comment("keep me", "qa")
+    dv = DataValidation(type="list", formula1='"A,B,C"')
+    ws.add_data_validation(dv)
+    dv.add("B1")
+    wb.save(str(sanitized))
+
+    bundle = tmp_path / "data.xlcloak"
+    _write_bundle(bundle, {"John Smith": "PERSON_001"}, {"PERSON_001": "John Smith"})
+
+    result = Restorer().run(sanitized, bundle, force=True)
+    restored_wb = openpyxl.load_workbook(str(result.restored_path))
+    restored_ws = restored_wb["Sheet1"]
+    assert restored_ws["A1"].value == "John Smith"
+    assert restored_ws["A1"].comment is not None
+    assert restored_ws["A1"].comment.text == "keep me"
+    assert restored_ws.data_validations is not None
+    assert len(restored_ws.data_validations.dataValidation) == 1
+
+
+def test_restorer_wrong_bundle_does_not_restore_unrelated_tokens(tmp_path: Path) -> None:
+    """Using a non-matching bundle should not restore cells incorrectly."""
+    from xlcloak.restorer import Restorer
+
+    sanitized = tmp_path / "edited_sanitized.xlsx"
+    _write_xlsx(sanitized, [(1, 1, "PERSON_001"), (2, 1, "EMAIL_002@example.com")])
+
+    wrong_forward = {"Alice Doe": "PERSON_777", "alice@example.com": "EMAIL_888@example.com"}
+    wrong_reverse = {v: k for k, v in wrong_forward.items()}
+    wrong_bundle = tmp_path / "wrong.xlcloak"
+    _write_bundle(wrong_bundle, wrong_forward, wrong_reverse)
+
+    result = Restorer().run(sanitized, wrong_bundle, force=True)
+    assert result.restored_count == 0
+    assert result.skipped_count == 2
+
+    restored_wb = openpyxl.load_workbook(str(result.restored_path))
+    restored_ws = restored_wb["Sheet1"]
+    assert restored_ws["A1"].value == "PERSON_001"
+    assert restored_ws["A2"].value == "EMAIL_002@example.com"
