@@ -86,7 +86,7 @@ def test_columns_only_skips_detector_and_only_tokenizes_forced_column(tmp_path: 
 
     wb = load_workbook(result.sanitized_path)
     ws = wb["Data"]
-    assert str(ws["B1"].value).startswith("CELL_")
+    assert ws["B1"].value == "Email"
     assert str(ws["B2"].value).startswith("CELL_")
     assert ws["A2"].value == "John Smith"
 
@@ -105,7 +105,7 @@ def test_forced_columns_are_excluded_from_detector_flow(tmp_path: Path) -> None:
 
     wb = load_workbook(result.sanitized_path)
     ws = wb["Data"]
-    assert str(ws["A1"].value).startswith("CELL_")
+    assert ws["A1"].value == "Name"
     assert str(ws["A2"].value).startswith("CELL_")
     assert ws["B2"].value == "john@example.com"
     assert all(col != 1 for _sheet, _row, col in detector.calls), (

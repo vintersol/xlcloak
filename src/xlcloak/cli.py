@@ -57,6 +57,7 @@ def main() -> None:
     help="Extract text cells to a plain text file without token replacement",
 )
 @click.option(
+    "-f",
     "--force",
     is_flag=True,
     default=False,
@@ -69,23 +70,17 @@ def main() -> None:
     help="Replace every text cell with a stable token regardless of content",
 )
 @click.option(
-    "-f",
+    "-c",
     "--full-column",
     "full_columns",
     multiple=True,
-    help="Force full-cell tokenization for Sheet.Col (repeatable)",
+    help="Force full-cell tokenization for Sheet.Col (repeatable, keeps row 1 header unchanged)",
 )
 @click.option(
     "--columns-only",
     is_flag=True,
     default=False,
-    help="Only tokenize columns passed via --full-column/-f; skip Presidio/spaCy",
-)
-@click.option(
-    "--allow-unsupported-surfaces",
-    is_flag=True,
-    default=False,
-    help="Deprecated compatibility flag; currently has no effect",
+    help="Only tokenize columns passed via --full-column/-c; skip Presidio/spaCy",
 )
 @click.option(
     "--verbose",
@@ -104,7 +99,6 @@ def sanitize(
     hide_all: bool,
     full_columns: tuple[str, ...],
     columns_only: bool,
-    allow_unsupported_surfaces: bool,
     verbose: bool,
 ) -> None:
     """Sanitize FILE, producing a sanitized xlsx, encrypted bundle, and manifest."""
@@ -117,7 +111,7 @@ def sanitize(
     if hide_all and columns_only:
         raise click.UsageError("--hide-all and --columns-only cannot be used together.")
     if columns_only and not full_columns:
-        raise click.UsageError("--columns-only requires at least one --full-column/-f.")
+        raise click.UsageError("--columns-only requires at least one --full-column/-c.")
 
     if dry_run:
         if hide_all:
@@ -142,7 +136,7 @@ def sanitize(
                 forced_count = sum(
                     1
                     for cell_ref in text_cells
-                    if (cell_ref.sheet_name, cell_ref.col) in forced_targets
+                    if (cell_ref.sheet_name, cell_ref.col) in forced_targets and cell_ref.row > 1
                 )
                 click.echo(f"Dry run (columns-only): {file.name}")
                 click.echo(
@@ -160,8 +154,10 @@ def sanitize(
             forced_replacements = 0
             for cell_ref in text_cells:
                 if (cell_ref.sheet_name, cell_ref.col) in forced_targets:
-                    registry.get_or_create(cell_ref.value, EntityType.GENERIC)
-                    forced_replacements += 1
+                    if cell_ref.row > 1:
+                        registry.get_or_create(cell_ref.value, EntityType.GENERIC)
+                        forced_replacements += 1
+                    # Keep row-1 headers unchanged for forced columns.
                     continue
                 col_header = (
                     sheet_headers.get(cell_ref.sheet_name, {}).get(cell_ref.col)
@@ -221,12 +217,6 @@ def sanitize(
             "Warning: Using default password. Use --password for real encryption.",
             err=True,
         )
-    if allow_unsupported_surfaces:
-        click.echo(
-            "Warning: --allow-unsupported-surfaces is deprecated and has no effect.",
-            err=True,
-        )
-
     try:
         detector = None if columns_only else PiiDetector()
         sanitizer = Sanitizer(detector, password)
@@ -278,6 +268,7 @@ def sanitize(
     help="Output path for restored file",
 )
 @click.option(
+    "-f",
     "--force",
     is_flag=True,
     default=False,
@@ -576,10 +567,3 @@ def diff(file: Path, bundle_path: Path, password: str, verbose: bool) -> None:
 
     click.echo("")
     click.echo("No files written.")
-
-
-# Aliases (per Phase 3 decisions D-01, D-02)
-main.add_command(restore, name="reconcile")    # reconcile -> restore (D-01, CLI-05)
-main.add_command(sanitize, name="deidentify")  # deidentify -> sanitize (D-02, CLI-07)
-main.add_command(restore, name="identify")     # identify -> restore (D-02, CLI-07)
-

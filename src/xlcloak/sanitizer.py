@@ -180,7 +180,7 @@ class Sanitizer:
         sheet_names = [ws.title for ws in wb.worksheets]
         forced_targets = parse_full_column_specs(full_columns, sheet_names)
         if columns_only and not forced_targets:
-            raise click.UsageError("--columns-only requires at least one --full-column/-f.")
+            raise click.UsageError("--columns-only requires at least one --full-column/-c.")
 
         # Detect and tokenize
         all_scan_results = []
@@ -192,6 +192,10 @@ class Sanitizer:
         # Forced columns are always processed first and excluded from detection.
         for cell in text_cells:
             if (cell.sheet_name, cell.col) not in forced_targets:
+                continue
+            if cell.row == 1:
+                # Treat row 1 as a header row for forced columns and keep it unchanged.
+                processed_cells.add((cell.sheet_name, cell.row, cell.col))
                 continue
             token = registry.get_or_create(cell.value, EntityType.GENERIC)
             patches.append((cell.sheet_name, cell.row, cell.col, token))

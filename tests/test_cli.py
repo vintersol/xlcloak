@@ -473,72 +473,20 @@ def test_diff_no_files_written(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# CLI alias tests
-# (reconcile -> restore, deidentify -> sanitize, identify -> restore)
-# These tests do not require the spaCy model.
-# ---------------------------------------------------------------------------
-
-
-@no_spacy_needed
-def test_alias_reconcile_help() -> None:
-    """xlcloak reconcile --help exits 0 and shows restore options."""
-    runner = CliRunner()
-    result = runner.invoke(main, ["reconcile", "--help"])
-
-    assert result.exit_code == 0, f"Expected exit 0: {result.output}"
-    assert "--bundle" in result.output, f"Expected '--bundle' in output: {result.output!r}"
-    assert "--password" in result.output, f"Expected '--password' in output: {result.output!r}"
-    assert "--force" in result.output, f"Expected '--force' in output: {result.output!r}"
-
-
-@no_spacy_needed
-def test_alias_deidentify_help() -> None:
-    """xlcloak deidentify --help exits 0 and shows sanitize options."""
-    runner = CliRunner()
-    result = runner.invoke(main, ["deidentify", "--help"])
-
-    assert result.exit_code == 0, f"Expected exit 0: {result.output}"
-    assert "--password" in result.output, f"Expected '--password' in output: {result.output!r}"
-
-
-@no_spacy_needed
-def test_alias_identify_help() -> None:
-    """xlcloak identify --help exits 0 and shows restore options."""
-    runner = CliRunner()
-    result = runner.invoke(main, ["identify", "--help"])
-
-    assert result.exit_code == 0, f"Expected exit 0: {result.output}"
-    assert "--bundle" in result.output, f"Expected '--bundle' in output: {result.output!r}"
-    assert "--password" in result.output, f"Expected '--password' in output: {result.output!r}"
-
-
-@no_spacy_needed
-def test_alias_reconcile_runs_restore(tmp_path: Path) -> None:
-    """reconcile with valid args produces same result as restore."""
-    sanitized, bundle = _make_sanitized_xlsx_and_bundle(tmp_path)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        main,
-        ["reconcile", str(sanitized), "--bundle", str(bundle), "--force"],
-    )
-
-    assert result.exit_code == 0, f"Expected exit 0: {result.output}\n{result.exception}"
-    assert "Restored:" in result.output or "Cells restored:" in result.output, (
-        f"Expected restore output: {result.output!r}"
-    )
-
-
 @no_spacy_needed
 def test_main_help_lists_all_commands() -> None:
-    """xlcloak --help lists all commands including aliases."""
+    """xlcloak --help lists core commands and excludes removed aliases."""
     runner = CliRunner()
     result = runner.invoke(main, ["--help"])
 
     assert result.exit_code == 0, f"Expected exit 0: {result.output}"
-    assert "reconcile" in result.output, f"Expected 'reconcile' in output: {result.output!r}"
-    assert "deidentify" in result.output, f"Expected 'deidentify' in output: {result.output!r}"
-    assert "identify" in result.output, f"Expected 'identify' in output: {result.output!r}"
+    assert "inspect" in result.output, f"Expected 'inspect' in output: {result.output!r}"
+    assert "sanitize" in result.output, f"Expected 'sanitize' in output: {result.output!r}"
+    assert "diff" in result.output, f"Expected 'diff' in output: {result.output!r}"
+    assert "restore" in result.output, f"Expected 'restore' in output: {result.output!r}"
+    assert "reconcile" not in result.output, f"Did not expect 'reconcile': {result.output!r}"
+    assert "deidentify" not in result.output, f"Did not expect 'deidentify': {result.output!r}"
+    assert "identify" not in result.output, f"Did not expect 'identify': {result.output!r}"
 
 
 # ---------------------------------------------------------------------------

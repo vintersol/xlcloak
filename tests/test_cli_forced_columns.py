@@ -26,7 +26,7 @@ def test_cli_columns_only_requires_full_column(tmp_path: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(main, ["sanitize", str(src), "--columns-only"])
     assert result.exit_code != 0
-    assert "--columns-only requires at least one --full-column/-f" in result.output
+    assert "--columns-only requires at least one --full-column/-c" in result.output
 
 
 def test_cli_full_column_rejects_bad_format(tmp_path: Path) -> None:
@@ -34,12 +34,12 @@ def test_cli_full_column_rejects_bad_format(tmp_path: Path) -> None:
     _make_workbook(src)
 
     runner = CliRunner()
-    result = runner.invoke(main, ["sanitize", str(src), "--columns-only", "-f", "Data:B"])
+    result = runner.invoke(main, ["sanitize", str(src), "--columns-only", "-c", "Data:B"])
     assert result.exit_code != 0
     assert "Expected format: Sheet.Col" in result.output
 
 
-def test_cli_short_f_forced_column_columns_only(tmp_path: Path) -> None:
+def test_cli_short_c_forced_column_columns_only(tmp_path: Path) -> None:
     src = tmp_path / "input.xlsx"
     _make_workbook(src)
 
@@ -47,13 +47,13 @@ def test_cli_short_f_forced_column_columns_only(tmp_path: Path) -> None:
     runner = CliRunner()
     result = runner.invoke(
         main,
-        ["sanitize", str(src), "--output", str(out_base), "--columns-only", "-f", "Data.B", "--force"],
+        ["sanitize", str(src), "--output", str(out_base), "--columns-only", "-c", "Data.B", "--force"],
     )
 
     assert result.exit_code == 0, result.output
     sanitized_path = tmp_path / "result_sanitized.xlsx"
     wb = load_workbook(sanitized_path)
     ws = wb["Data"]
-    assert str(ws["B1"].value).startswith("CELL_")
+    assert ws["B1"].value == "Email"
     assert str(ws["B2"].value).startswith("CELL_")
     assert ws["A2"].value == "John Smith"

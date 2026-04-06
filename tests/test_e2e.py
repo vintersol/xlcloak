@@ -44,7 +44,6 @@ def _cell_values(path: Path) -> dict[str, dict[str, object]]:
 def _round_trip(
     fixture: Path,
     tmp_path: Path,
-    allow_unsupported_surfaces: bool = False,
 ) -> tuple[Path, Path]:
     """Run sanitize then restore; return (original_fixture_copy, restored_path)."""
     src = tmp_path / fixture.name
@@ -54,8 +53,6 @@ def _round_trip(
 
     # Sanitize
     sanitize_cmd = ["sanitize", str(src), "--password", _PASSWORD]
-    if allow_unsupported_surfaces:
-        sanitize_cmd.append("--allow-unsupported-surfaces")
     result = runner.invoke(main, sanitize_cmd)
     assert result.exit_code == 0, f"sanitize failed: {result.output}"
 
@@ -81,9 +78,7 @@ def _round_trip(
 def test_sanitize_restore_round_trip(fixture_name: str, tmp_path: Path) -> None:
     """sanitize+restore succeeds and restores at least one exact token cell."""
     fixture = FIXTURES_DIR / fixture_name
-    original, restored = _round_trip(
-        fixture, tmp_path, allow_unsupported_surfaces=(fixture_name == "hard.xlsx")
-    )
+    original, restored = _round_trip(fixture, tmp_path)
 
     # Files exist and are readable.
     assert original.exists()

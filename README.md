@@ -1,125 +1,145 @@
 # xlcloak
 
-Reversible Excel text sanitization CLI for AI workflows.
+`xlcloak` helps you safely use Excel files with AI tools.
 
-`xlcloak` sanitizes `.xlsx` files before sending them to AI tools by replacing sensitive text with stable tokens, then restores originals afterward from an encrypted bundle.
+It replaces sensitive text in a `.xlsx` file with stable placeholder tokens, lets AI work on that sanitized copy, and then restores the original values from an encrypted bundle.
+
+## How It Works
+
+| Stage 1: Before sanitize | -> | Stage 2: AI-safe copy | -> | Stage 3: After Restore |
+|---|---|---|---|---|
+| myemail@gmail.com |  | EMAIL_01 |  | myemail@gmail.com |
+| My Company AB |  | ORG_01 |  | My Company AB |
+| My Company AB |  | ORG_01 |  | My Company AB |
+
+## Quick Start
+
+### Commands
+
+| Command | Purpose | Example |
+|---|---|---|
+| `xlcloak inspect <file.xlsx>` | Preview what sensitive data would be detected. Writes nothing. | `xlcloak inspect report.xlsx --verbose` |
+| `xlcloak sanitize <file.xlsx>` | Create a sanitized workbook + encrypted restore bundle. | `xlcloak sanitize report.xlsx --password "your-password"` |
+| `xlcloak diff <sanitized.xlsx>` | Check which tokens AI changed before restore. | `xlcloak diff report_sanitized.xlsx --bundle report.xlcloak` |
+| `xlcloak restore <sanitized.xlsx>` | Restore original values where tokens are still intact. | `xlcloak restore report_sanitized.xlsx --bundle report.xlcloak --output report` |
+| `xlcloak --help` | Show all commands and global help text. | `xlcloak --help` |
+
+### Key Options
+
+| Option | Used With | What It Does |
+|---|---|---|
+| `--password TEXT` | `sanitize`, `restore`, `diff` | Password for bundle encryption/decryption. |
+| `--output PATH` | `sanitize`, `restore` | Set a base output name/path. xlcloak appends `_sanitized` or `_restored`. |
+| `--bundle PATH` | `sanitize`, `restore`, `diff` | Set or point to the `.xlcloak` encrypted bundle file. |
+| `-f, --force` | `sanitize`, `restore` | Overwrite existing output files. |
+| `-c, --full-column Sheet.Col` | `sanitize` | Force tokenization of a whole column from row 2 onward (row 1 header is kept). |
+| `--dry-run` | `sanitize` | Show what would happen without writing files. |
+| `--verbose` | all commands | Show more detail in output. |
+| `--columns-only` | `sanitize` | Only tokenize `--full-column` columns; skip Presidio/spaCy detection. |
+| `--hide-all` | `sanitize` | Tokenize all text cells, not just detected PII. |
+| `--text-mode` | `sanitize` | Export text cells to `.txt` instead of token replacement. |
+
 
 ## Install
 
 ```bash
 pip install xlcloak
-python -m spacy download en_core_web_lg
 ```
 
-## Overview
-
-1. Inspect an Excel file for PII.
-2. Sanitize and generate an encrypted restore bundle.
-3. Let AI edit the sanitized file.
-4. Diff AI changes against token expectations.
-5. Restore original values where tokens are intact.
-
-## Command quick reference
-
-| Command | What it does | Common use example |
-|---|---|---|
-| `xlcloak inspect <file>` | Scan for PII without writing files. | `xlcloak inspect report.xlsx --verbose` |
-| `xlcloak sanitize <file>` | Replace PII with tokens and create `.xlcloak` bundle. | `xlcloak sanitize report.xlsx --password "$XLCLOAK_PASSWORD"` |
-| `xlcloak diff <file>` | Show token changes between AI-edited file and bundle. | `xlcloak diff report_sanitized.xlsx --bundle report.xlcloak` |
-| `xlcloak restore <file>` | Restore original values from bundle into edited file. | `xlcloak restore report_sanitized.xlsx --bundle report.xlcloak --output report_restored.xlsx` |
-
-## Typical workflows
-
-### Safe default flow
+Confirm it works:
 
 ```bash
-xlcloak inspect report.xlsx
-xlcloak sanitize report.xlsx --password "$XLCLOAK_PASSWORD"
-xlcloak diff report_sanitized.xlsx --bundle report.xlcloak
-xlcloak restore report_sanitized.xlsx --bundle report.xlcloak --output report_restored.xlsx
+xlcloak --help
 ```
 
-### Dry-run detection only
-
-```bash
-xlcloak sanitize report.xlsx --dry-run --verbose
-```
-
-### Force specific columns to full tokenization
-
-```bash
-xlcloak sanitize report.xlsx -f Data.B -f Vendors.C
-```
-
-### Tokenize only selected columns (skip Presidio/spaCy)
-
-```bash
-xlcloak sanitize report.xlsx --columns-only -f Data.B -f Vendors.C
-```
-
-### Use explicit output paths
-
-```bash
-xlcloak sanitize report.xlsx \
-  --output out/report_sanitized.xlsx \
-  --bundle out/report.xlcloak
-
-xlcloak restore out/report_sanitized.xlsx \
-  --bundle out/report.xlcloak \
-  --output out/report_restored.xlsx
-```
-
-## Options by command
+## Command Details
 
 ### `inspect`
 
+Preview detections without writing files.
+
+Example:
+
+```bash
+xlcloak inspect report.xlsx --verbose
+```
+
 | Option | Description |
 |---|---|
-| `--verbose` | Show confidence scores and detection method per entity. |
+| `--verbose` | Show confidence scores and detection methods. |
 
 ### `sanitize`
 
+Create sanitized workbook + encrypted bundle (+ manifest).
+
+Example:
+
+```bash
+xlcloak sanitize report.xlsx --password "choose-a-strong-password" -c Data.B -f
+```
+
 | Option | Description |
 |---|---|
-| `--password TEXT` | Encryption password for the bundle. If omitted, a random key is used and a warning is printed (not suitable for sensitive data). |
-| `--output PATH` | Output path for the sanitized file. |
-| `--bundle PATH` | Explicit output path for the `.xlcloak` bundle. |
-| `--dry-run` | Preview detection without writing files. |
-| `--text-mode` | Extract all text cells to a `.txt` file instead of token replacement. |
-| `--force` | Overwrite existing output files. |
-| `-f, --full-column Sheet.Col` | Force full-cell tokenization for selected columns (repeatable). |
-| `--columns-only` | Only tokenize selected `--full-column` columns; skip Presidio/spaCy. |
-| `--verbose` | Show entity breakdown by type after sanitizing. |
+| `--password TEXT` | Encryption password for bundle output. |
+| `--output PATH` | Base path/name for output. Final file becomes `<base>_sanitized.xlsx`. |
+| `--bundle PATH` | Explicit output path for `.xlcloak` bundle. |
+| `--dry-run` | Show what would be replaced without writing files. |
+| `--text-mode` | Write all text cells to a `.txt` file. |
+| `-f, --force` | Overwrite output files if they already exist. |
+| `--hide-all` | Replace every text cell with tokens. |
+| `-c, --full-column Sheet.Col` | Force full-cell tokenization for chosen columns from row 2 onward. |
+| `--columns-only` | Only tokenize columns passed with `--full-column`. |
+| `--verbose` | Show detailed summary and entity breakdown. |
 
 ### `diff`
 
+Compare sanitized workbook tokens with what is expected from the bundle.
+
+Example:
+
+```bash
+xlcloak diff report_sanitized.xlsx --bundle report.xlcloak --password "choose-a-strong-password" --verbose
+```
+
 | Option | Description |
 |---|---|
-| `--bundle PATH` | Path to the `.xlcloak` restore bundle (required). |
-| `--password TEXT` | Decryption password. |
-| `--verbose` | Show unchanged token cells and non-token cell count. |
+| `--bundle PATH` | Path to `.xlcloak` bundle (required). |
+| `--password TEXT` | Bundle decryption password. |
+| `--verbose` | Also show unchanged tokens and non-token cell count. |
 
 ### `restore`
 
+Restore original values where tokens are still present.
+
+Example:
+
+```bash
+xlcloak restore report_sanitized.xlsx --bundle report.xlcloak --password "choose-a-strong-password" --output report -f
+```
+
 | Option | Description |
 |---|---|
-| `--bundle PATH` | Path to the `.xlcloak` restore bundle (required). |
-| `--password TEXT` | Decryption password. |
-| `--output PATH` | Output path for the restored file. |
-| `--force` | Overwrite existing output. |
-| `--verbose` | Show AI-modified tokens that were skipped. |
+| `--bundle PATH` | Path to `.xlcloak` bundle (required). |
+| `--password TEXT` | Bundle decryption password. |
+| `--output PATH` | Base path/name for output. Final file becomes `<base>_restored.xlsx`. |
+| `-f, --force` | Overwrite existing output files. |
+| `--verbose` | Show skipped token details if AI changed them. |
 
-## Aliases
+## `inspect` vs `sanitize --dry-run`
 
-| Alias | Equivalent |
-|---|---|
-| `deidentify` | `sanitize` |
-| `identify` | `restore` |
-| `reconcile` | `restore` |
+| Command | Best use | Output style |
+|---|---|---|
+| `inspect` | Understand what was found and where (sheet/cell-level detail). | Rich table with entity rows and optional scores (`--verbose`). |
+| `sanitize --dry-run` | Estimate replacement volume before writing files. | Summary counts only (entities, forced-column counts, hide-all counts). |
 
-## How it works
+## Notes and Safety Tips
 
-`sanitize` detects PII with Microsoft Presidio and replaces each entity with stable tokens (`PERSON_001`, `ORG_002`, `EMAIL_003`, etc.). The token-to-original map is encrypted (Fernet + PBKDF2-derived key) in the `.xlcloak` bundle. `restore` decrypts that bundle and writes originals back where tokens are still present. If AI removed or altered a token, that cell is skipped and reported.
+- If you skip `--password`, the default password is used. This is convenient for testing, but not safe for real sensitive data.
+- Keep your `.xlcloak` bundle and password safe. You need both to restore originals.
+- If AI deletes or edits tokens, those cells are skipped during restore and reported.
+- `sanitize` also writes a text manifest (`*_manifest.txt`), and `restore` writes a restore report (`*_restore_manifest.txt`).
+- `--columns-only` requires at least one `--full-column`/`-c`, and it cannot be combined with `--hide-all`.
+- Formulas, charts, and comments are treated as unsupported surfaces and are reported as warnings (not sanitized).
 
 ## License
 
