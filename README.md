@@ -42,15 +42,63 @@ It replaces sensitive text in a `.xlsx` file with stable placeholder tokens, let
 
 ## Install
 
+These steps install `xlcloak` from this GitHub source folder using `pipx`.
+
+### Windows (PowerShell)
+
 ```bash
-pip install xlcloak
+py --version
+py -m pip install --user pipx
+py -m pipx ensurepath
 ```
 
-Confirm it works:
+Close and reopen PowerShell, then from the repo root:
 
 ```bash
+pipx install .
 xlcloak --help
 ```
+
+Supported Python versions: `3.10` to `3.13` (`>=3.10,<3.14`).
+
+### macOS (Terminal)
+
+```bash
+python3 --version
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
+```
+
+Close and reopen Terminal, then from the repo root:
+
+```bash
+pipx install .
+xlcloak --help
+```
+
+Supported Python versions: `3.10` to `3.13` (`>=3.10,<3.14`).
+
+### Upgrade
+
+From the repo root:
+
+```bash
+git pull
+pipx reinstall xlcloak --spec .
+xlcloak --help
+```
+
+### Uninstall
+
+```bash
+pipx uninstall xlcloak
+```
+
+### Troubleshooting
+
+- `xlcloak` command not found after install: run `py -m pipx ensurepath` (Windows) or `python3 -m pipx ensurepath` (macOS), then reopen the terminal.
+- Wrong Python version: install/use Python `3.10` to `3.13`, then reinstall with `pipx reinstall xlcloak --spec .`.
+- Verify what pipx installed: run `pipx list`.
 
 ## Command Details
 
