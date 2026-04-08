@@ -10,7 +10,7 @@ It replaces sensitive text in a `.xlsx` file with stable placeholder tokens, let
 |---|---|---|---|---|
 | myemail@gmail.com |  | EMAIL_01 |  | myemail@gmail.com |
 | My Company AB |  | ORG_01 |  | My Company AB |
-| My Company AB |  | ORG_01 |  | My Company AB |
+| +46 72 243 33 11 |  | +01 111 11 11 |  | +46 72 243 33 11 |
 
 ## Quick Start
 
@@ -46,6 +46,8 @@ These steps install `xlcloak` from this GitHub source folder using `pipx`.
 
 ### Windows (PowerShell)
 
+Supported Python versions: `3.10` to `3.13` (`>=3.10,<3.14`).
+
 ```bash
 py --version
 py -m pip install --user pipx
@@ -59,7 +61,6 @@ pipx install .
 xlcloak --help
 ```
 
-Supported Python versions: `3.10` to `3.13` (`>=3.10,<3.14`).
 
 ### macOS (Terminal)
 
