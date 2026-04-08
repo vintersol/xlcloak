@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import warnings
 
 import spacy.util
@@ -79,6 +80,37 @@ def _is_obvious_header_label(text: str) -> bool:
     """Return True if text looks like a schema/header label, not user content."""
     normalized = " ".join(text.lower().replace("_", " ").replace("-", " ").split())
     return normalized in _OBVIOUS_HEADER_LABELS
+
+
+def _is_plausible_phone_text(text: str) -> bool:
+    """Return True when a matched span looks like a real phone string.
+
+    This intentionally tightens acceptance to reduce false positives on
+    numeric values in spreadsheets (for example decimals and plain IDs).
+    """
+    candidate = text.strip()
+    if not candidate:
+        return False
+
+    digits = re.sub(r"[^0-9]", "", candidate)
+    if len(digits) < 7:
+        return False
+
+    # Reject decimal values like "164.9" and "164,90" even if recognizers fire.
+    if re.fullmatch(r"[+-]?\d+[.,]\d{1,4}", candidate):
+        return False
+
+    # Pure numeric IDs are common in spreadsheets and should not be treated
+    # as phone numbers unless there is explicit phone formatting.
+    has_phone_cue = (
+        candidate.startswith("+")
+        or any(ch in candidate for ch in "-()")
+        or bool(re.search(r"\d\s+\d", candidate))
+    )
+    if not has_phone_cue:
+        return False
+
+    return True
 
 
 class PiiDetector:
@@ -169,6 +201,17 @@ class PiiDetector:
             entities=PHASE2_ENTITIES,
             score_threshold=threshold,
         )
+
+        # Phone recognizers can be over-eager on numeric cells. Drop
+        # phone results that do not have plausible phone-like formatting.
+        raw_results = [
+            r
+            for r in raw_results
+            if not (
+                r.entity_type == "PHONE_NUMBER"
+                and not _is_plausible_phone_text(cell.value[r.start : r.end])
+            )
+        ]
 
         # Suppress obvious header labels (for example "Email") that may be
         # misclassified by NER as PERSON.

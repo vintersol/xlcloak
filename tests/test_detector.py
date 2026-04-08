@@ -422,3 +422,27 @@ def test_loose_phone_recognizer_rejects_short() -> None:
     r = LoosePhoneRecognizer()
     results = r.analyze("+1-555", entities=["PHONE_NUMBER"])
     assert not results, "+1-555 (only 4 digits) should be rejected"
+
+
+def test_phone_false_positive_decimal_rejected(detector: PiiDetector, registry: TokenRegistry) -> None:
+    """Numeric decimals like 164.9 must not be treated as phones."""
+    cell = _make_cell("Value: 164.9")
+    scan_results, replaced_text = detector.detect_cell(cell, registry)
+    phone_results = [r for r in scan_results if r.entity_type == EntityType.PHONE]
+    assert not phone_results, f"Did not expect PHONE result for decimal value: {scan_results}"
+    assert replaced_text == cell.value, (
+        f"Decimal value should remain unchanged, got: {replaced_text!r}"
+    )
+
+
+def test_phone_false_positive_plain_numeric_id_rejected(
+    detector: PiiDetector, registry: TokenRegistry
+) -> None:
+    """Plain numeric IDs without phone cues must not be tagged as phones."""
+    cell = _make_cell("Customer id 1234567890")
+    scan_results, replaced_text = detector.detect_cell(cell, registry)
+    phone_results = [r for r in scan_results if r.entity_type == EntityType.PHONE]
+    assert not phone_results, f"Did not expect PHONE result for plain numeric ID: {scan_results}"
+    assert replaced_text == cell.value, (
+        f"Numeric ID should remain unchanged, got: {replaced_text!r}"
+    )
